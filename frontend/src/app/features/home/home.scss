@@ -1,0 +1,30 @@
+.hero {
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+
+  h1 {
+    font-size: 2.5rem;
+    margin: 0;
+  }
+
+  &__tagline {
+    font-size: 1.25rem;
+    opacity: 0.75;
+    margin: 0.5rem 0 1.5rem;
+  }
+
+  &__pitch {
+    line-height: 1.6;
+    margin: 0 0 2rem;
+  }
+
+  &__cta {
+    display: inline-block;
+    padding: 0.7rem 1.6rem;
+    border-radius: 6px;
+    background: #222;
+    color: #fff;
+    text-decoration: none;
+  }
+}

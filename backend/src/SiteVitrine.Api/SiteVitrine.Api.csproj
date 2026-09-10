@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Traite les warnings comme des erreurs en CI/Release : évite d'accumuler du bruit. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Provider EF Core pour PostgreSQL. Il tire Microsoft.EntityFrameworkCore en dépendance. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Design : nécessaire uniquement pour l'outil `dotnet ef` (génération des migrations).
+         PrivateAssets="all" => n'est pas propagé aux projets qui référenceraient celui-ci. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Génération du document OpenAPI (first-party depuis .NET 9) : sert de doc vivante de l'API. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <!-- Remontée forcée d'une dépendance transitive : Microsoft.AspNetCore.OpenApi 10.0.3 tire
+         Microsoft.OpenApi 2.0.0, vulnérable (GHSA-v5pm-xwqc-g5wc, corrigé en 2.7.5). Déclarer le
+         package explicitement au niveau projet écrase la version transitive. À supprimer quand
+         un correctif d'ASP.NET Core embarquera lui-même une version saine. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+    <!-- Health check qui vérifie que le DbContext arrive à joindre la base : utilisé par Docker. -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.3" />
+    <!-- Interface web du back-office : rend le document OpenAPI sous forme d'écrans avec formulaires.
+         Depuis .NET 9, MapOpenApi ne fournit que le JSON, plus d'interface intégrée. -->
+    <PackageReference Include="Scalar.AspNetCore" Version="2.17.1" />
+    <!-- Lecture/écriture du fichier de contenu content/resources.yaml. YAML plutôt que JSON pour
+         ses blocs littéraux : les avis sont de longs paragraphes, éditables tels quels sans
+         échappement. C'est la seule dépendance qui existe pour sortir le contenu du code. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+</Project>

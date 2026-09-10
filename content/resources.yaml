@@ -1,0 +1,252 @@
+# Contenu de la page « Livres & outils ».
+#
+# Ce fichier est monté en lecture seule dans le conteneur de l'API (/app/content) et n'est JAMAIS
+# importé automatiquement : l'import se déclenche à la main (voir README, section Contenu).
+# Éditer ici puis réimporter — aucune recompilation, aucun redéploiement d'image.
+#
+# L'ORDRE DES ENTRÉES définit l'ordre d'affichage sur le site : déplacer un bloc suffit à réordonner.
+# La clé `slug` est l'identifiant stable : c'est sur elle que l'import fait sa correspondance.
+# La renommer crée une nouvelle ressource au lieu de mettre à jour l'existante.
+#
+# `avis` utilise un bloc littéral `|-` : tout ce qui est indenté en dessous est pris tel quel,
+# sans échappement (guillemets, apostrophes, deux-points — tout passe).
+
+resources:
+  - slug: cs-players-guide
+    title: "C# Player's Guide"
+    imageUrl: CsPlayerGuide.jpg
+    siteUrl: https://csharpplayersguide.com/
+    note: 5
+    avis: |-
+      Ce n'est pas le premier livre que j'ai lu pour découvrir le language, mais c'est définitivement celui que je conseillerais à un débutant et pas seulement, qui  souhaite découvrir le language voir même la programmation tout cours. Outre son aspect ludique, le livre est très bien structuré et permet d'apprendre de manière  progressive les facettes mêmes avancés du language. De plus, le livre reçois des "mises à jour" sous forme de pdf mis à disposition gratuitement sur le site de l'auteur', garantissant de toujours être à la page sur les dernières fonctionnalités du language. Dommage cependant qu'il n'aborde pas certains thèmes conexes au langage tel que les framework ui, la sérialisation/ désérialisation de fichiers structurés, etc.
+    positifs:
+      - ludique et à la complexité progresssive
+      - très bien structuré
+      - des exercices pour consolider le savoir appris
+      - exhaustif sur le language en lui même
+    negatifs:
+      - n'aborde pas les frameworks courrant librairies utilisés avec le language.
+
+  - slug: cs12-in-a-nutshell
+    title: "C#12 in a nutshell"
+    imageUrl: CsInANutshell.jpg
+    siteUrl: https://www.albahari.com/nutshell/
+    note: 4
+    avis: |-
+      Contrairement à ce que son nom pourrait faire penser, ce livre n'est pas un résumé à l'intention des débutants, mais bien un livre dense sur le language pouvant servir de référence pour les développeurs confirmés. Si je n'ai pas eu l'ocasion de le lire en entier, et que pour des recherches précises, on sera vite tenté de lui substituer google ou l'utilisation de l'ia, il n'en demeure pas moins une excellente ressource pour ceux souhaitant approfondire leur connaissance du language.
+    positifs:
+      - très complet
+      - ne se limite pas aux fonctionnalités de base du language
+    negatifs:
+      - difficile à lire de "manière séquentielle"
+      - on lui préfèrera bien souvent google ou chatgpt pour des questions précises en particulier lorsque relative à un framework en particulier
+
+  - slug: linqpad
+    title: LINQPad
+    imageUrl: LinqPad.png
+    siteUrl: https://www.linqpad.net/
+    note: 4
+    avis: |-
+      Outil compagnon officiel de c#12 in a nutshell, Linqpad est un outil très pratique pour tester et manipuler du code c# et des bases de données. Très facile à prendre en main, il permet facilement de tester du code à la volée, avec sa fonction dump() de facilement voir, et de manière très claire le contenu des variables ou des bases de données. Il peut également facilement s'interfacer avec une base de code existante, librairies externes ou votre propre base de code, idéal pour tester ce dernier depuis des "points d'entrée" alternatifs.Par ailleurs, il viens aussi avec des guides interractifs pour découvrir le language c# et les fonctionnalités de linq.
+    positifs:
+      - facile à utiliser
+      - fonction dump() très puissante
+      - peut se connecter aux librairies externes ainsi qu'a notre propre base de code
+      - gère les bases de données
+      - guides pour découvrir le language
+    negatifs:
+      - version gratuite trop limitée (abscende d'intellisense), et programme bien cher pour ceux qui voudraient "juste tester"
+
+  - slug: vs-code
+    title: VS Code
+    imageUrl: VsCode.png
+    siteUrl: https://code.visualstudio.com/
+    note: 4
+    avis: |-
+      Outil très polyvalent, je crois qu'il s'agit de l'editeur de code le plus utilisé en programmation, très simple dans les fonctionnalités qu'il propose, l'utilisateur novice ressentira le manque de certaines fonctionnalités user friendly/ quality of life, avec laquelle l'utilisateur confirmé aura appris à se passer. Ainsi, il sera bien souvent nécessaire de passer par le terminal  ou commandes vs code pour initialiser un projet, ajouter un template ou démarrer un serveur. Pour autant, VS Code dispose d'un eventail d'extensions très large permettant de compenser ces fonctionnalités non disponibles nativement, et cette absence de fonctionnalités haut niveau permet aussi de mieux comprendre ce qui se passe à bas niveau.
+    positifs:
+      - Très polyvalent
+      - Eventail d'extensions très large
+      - Editeur de code largement répendu (tutoriels, etc.)
+    negatifs:
+      - Assez rustique sans extensions
+
+  - slug: cursor
+    title: Cursor
+    imageUrl: Cursor.png
+    siteUrl: https://www.cursor.com/
+    note: 4
+    avis: |-
+      Dérivé de VS Code, Cursor intègre par ailleurs une intégration native de l'ia plus poussée que VS Code, intégrant de l'autocomplétion plus appronfondie que ce dernier (qui intégrait déjà pas mal de fonctionalités avancés avec github copilot), par ailleurs, en tant que dérivé de VS code, il dispose de tout l'écosystème de ce dernier, idem pour l'interface qui est quasiment identique. En clair il s'agit de l'ide que je recommendrais pour faire du code assisté par ia
+    positifs:
+      - compatible avec tout l'écosystème VS Code, et interface sensiblement identique
+      - très bonne intégration de l'ia
+    negatifs:
+      - payant (un abonnement en plus)
+
+  - slug: visual-studio
+    title: Visual Studio
+    imageUrl: VisualStudio.png
+    siteUrl: https://visualstudio.microsoft.com/
+    note: 2
+    avis: |-
+      Editeur de code plus directif dans son fonctionnement que VS Code, on pourrait penser qu'il soit egalement plus facile à utiliser, que l'on troque ainsi de la flexibilité pour une certaine facilité d'utilisation, cependant, dans les faits, même si il est vrai qu'un certain nombre de choses vous paraitrons plus simples que avec vs code dans un premier temps, vous vous sentirez bien vite laisé par le nombre de fonctionnalités de haut niveau qui ne sont pas accessibles facilement. Ainsi, vous vous retrouverez avec un IDE qui ne donne ni acces à une pallette d'outils haut niveau suffisament complete pour ne pas avoir à ce soucier de ce qui se passe à bas niveau et qui d'un autre coté rends difficile d'accés les outils à bas niveau qui nous permettraient de compenser ce manque, et ce en plus de parfois faire des abstractions dont l'intérêt reste à prouver (je pense notament à "l'éditeur de solutions" dont l'intérêt par rapport à l'arboressance classique du projet reste à démontrer). Au final, pas assez complet pour un débutant, et inutilement "bloaté" pour un utilisateur avancé, je pense que ce logiciel aura du mal à trouver un public.
+    positifs:
+      - permet de démarrer facilement dans une facilité apparente
+    negatifs:
+      - pas assez "user friendly" pour un logiciel aussi directif
+      - masque beaucoup de son fonctionnement réel, sans que ce cette complexité cachée ne se traduise en simplicité d'utilisation pour l'utilisateur final
+      - Au premier problème avec visual studio, vous allez comprendre pourquoi il aurait mieux vallu utiliser vs code
+
+  - slug: notion
+    title: Notion
+    imageUrl: Notion.svg
+    siteUrl: https://www.notion.com
+    note: 4
+    avis: |-
+      "notetaking app" bien pratique, permettant, grace à son système d'intégration de combiner des documents de natures très diverses, comme du texte, des images des tableaux, du contenu web, et même d'autres pages de notes, combiné à ses posiblités de partage et d'édition simultanée, ca en fait un logiciel idéal de centralisation d'informations pour soi ou le travail en équipe.
+    positifs:
+      - simple à utiliser
+      - beaucoup d'intégrations disponibles
+      - peut être parcouru et édité par plusieurs personnes en même temps
+    negatifs:
+      - format de stockage propréiétaire, et espace de stockage très limité dans la version gratuite
+      - intégrations personnalisés difficiles (possible avec combine, mais pas de moyen "propre" de les faire)
+
+  - slug: affine
+    title: Affine
+    imageUrl: Affine.svg
+    siteUrl: https://affine.pro
+    note: 4
+    avis: |-
+      Affine est la principale alternative open-source de notion, non content de reproduire la plupart des fonctions de ce dernier, elle ajoute aussi dont la prise en charge native des diagrammes (pouvant eux même contenir pages, images ou intégrations)
+    positifs:
+      - très proche de notion, la plupart des points s'appliquent aussi à ce dernier
+      - open source, permet le stockage des données en local ou sur des serveurs auto-hébergés (en plus de proposer des solutions hébergés sur leurs serveurs)
+    negatifs:
+      - "certaines fonctionnalités moins bien prise en charge que avec notion (ex: dimensions des integrations web non personnalisable)"
+      - comme pour notion, intégrations personnalisés difficile, ce qui est d'autant plus dommage que ce dernier fonctionnant en local, on aurait pu espérer davantage d'intégrations vis à vis du contenu local.
+
+  - slug: udemy
+    title: Udemy
+    imageUrl: logo-udemy.svg
+    siteUrl: https://www.udemy.com/
+    note: 4
+    avis: |-
+      Plate forme de distribution de cours en ligne, udemy est selon moi le point de départ idéal pour découvrir une nouvelle technologie, l'avantage de cette plate forme est qu'elle permet de trouver des cours complets sur beaucoup de sujets plutot que de suivre des tutoriels eparces sur un sous ensemble de ce sujet. A noter que comme udemy est juste une plate forme d'hébergement, il ne font pas leurs cours si bien que leur qualité peut être variable, mais la plupart des cours mis en avant sont de bonne qualité.
+    positifs:
+      - Beaucoup de cours disponibles pour un abonnement unique
+      - Centralise l'aquisition de connaissances evitant ainsi en général d'avoir à passer d'un tutoriel à un autre
+      - tutoriel au format vidéo
+    negatifs:
+      - payant
+      - Certains thèmes moins bien couverts que d'autres, où il peut être dur de trouver un tutoriel de qualité.
+      - manque de support textuel type "récapitulatif" de cours pour résumant les points à retenir pour la majorité des cours.
+
+  - slug: cours-angular-udemy
+    title: Cours Angular de Maximilian Schwarzmüller (Udemy)
+    imageUrl: AngularAcademind.png
+    siteUrl: https://www.udemy.com/course/the-complete-guide-to-angular-2/
+    note: 4
+    avis: |-
+      Cours complet sur angular, nous présentant les différents aspects du framework (composants, services, injection de dépendances, routing, etc.) ainsi que les features legacy comme les modules, c'est la principale ressource que j'ai utilisée pour apprendre le framework.
+    positifs:
+      - Aborde le framework de manière très complète
+      - présente différentes manières de faire, notament avec les features legacy
+    negatifs:
+      - pas de fiches récapitulatives pour "réviser".
+
+  - slug: kempa-plays
+    title: Kempa Plays (Youtube)
+    imageUrl: KempaPlays.png
+    siteUrl: https://www.youtube.com/@KampaPlays/videos
+    note: 3
+    avis: |-
+      c'est la chaine youtube qui m'a donné envie à m'intéresser au wpf, bien qu'elle ne se soit arrétée brusquement en 2023, en laissant beaucoup de thèmes du framework non traités, c'est une chaine que j'appréciait beaucoup pour la qualité de ses explications.
+    positifs:
+      - très agréable à regarder
+      - explications très pratiques, faciles à comprendre et à appliquer
+    negatifs:
+      - beaucoup d'aspects du framework non abordés
+      - manque parfois d'explications théoriques
+
+  - slug: learn-wpf-mvvm
+    title: Learn WPF MVVM d'Arnaud Weil
+    imageUrl: LearnWpf.jpg
+    siteUrl: https://mybook.to/wpf
+    note: 3
+    avis: |-
+      livre extrèmement concis sur le fonctionnement de WPF, il s'agit de la version " au format livre" d'un bootcamp que donnais l'auteur, et se veut un guide pour être opérationnel rapidement. Ce livre s'inspire de WPF 4.5 Unleashed (voir dessous) à en juger à certaines parties, fait moins d'une centaine de pages, et correspond à ce que l'on obtiendrait en "gardant les 20% que l'on utilise 80% du temps".
+    positifs:
+      - très cours, on ne perds pas grand chose à lire ce livre
+      - Quelques conseils pratiques intéressants
+    negatifs:
+      - Il manques certains aspects théoriques importants du framework, et on finit avec une connaissance fragmentaire, comme si on avait juste regardé des tutoriels vidéo.
+
+  - slug: wpf-45-unleashed
+    title: WPF 4.5 Unleashed de Adam Nathan
+    imageUrl: WpfUnleashed.jpg
+    siteUrl: https://www.amazon.fr/WPF-4-5-Unleashed-Adam-Nathan/dp/0672336979
+    note: 4
+    avis: |-
+      Livre très intéressant sur le framework, si je n'ai pas encore pris le temps de le lire en entier, il donne certaines clés pour comprendre le framework que je n'ai pas trouvé ailleurs, pas étonnant qu'il soit toujours la référence sur le dommaine du WPF (avec Pro WPF 4.5 dont je fairait une review quand je l'aurais lu)
+    positifs:
+      - Un livre très complet sur le framework
+      - Donne des clés de compréhension de ce dernier que l'on ne trouve nulle part ailleurs
+    negatifs:
+      - livre dense, je ne l'ai pas lu en entier, et je mettrait à jour la review quand je l'aurais fait
+
+  - slug: windows-10-system-programming
+    title: Windows 10 System Programming
+    imageUrl: WindowsSystemProgramming.png
+    siteUrl: https://leanpub.com/windows10systemprogramming
+    note: 3
+    avis: |-
+      Un livre très intéressant théoriquement sur les api systèmes de windows, nous en apprends beaucoup sur le fonctionnement bas niveau de windows. Il est parcemé d'exercices qui ne sont pas de simples applications bruts de ce qui aura été expliqué plus tot, attendez vous à y passer du temps.
+    positifs:
+      - On apprends beaucoup sur le fonctionnement bas niveau de windows
+      - Exercices qui nous forcent à apprendre à nous débrouiller
+    negatifs:
+      - Peu de connaissances "utilisables tel quel".
+
+  - slug: core-dumped
+    title: Core Dumped (Youtube)
+    imageUrl: CoreDumped.png
+    siteUrl: https://www.youtube.com/@CoreDumpped/videos
+    note: 4
+    avis: |-
+      Chaine youtube présentant le fonctionnement de l'informatique bas niveau de manière extrèmement claire, avec des schémats power point, d'une qualité incroyable pour une chaine gérée par une seule personne, je conseillerais à tout le monde de regarder son contenu.
+    positifs:
+      - Explications claires sur des thèmes avancés de l'informatique
+    negatifs:
+      - tout les thèmes ne sont pas abordés
+      - Connaissances peu applicables "tel quel"
+
+  - slug: xaml-unleashed
+    title: XAML Unleashed de Adam Nathan
+    imageUrl: XamlUnleashed.jpg
+    siteUrl: https://www.amazon.fr/XAML-Unleashed-Adam-Nathan-ebook/dp/B00RN14FJQ
+    note: 2
+    avis: |-
+      Le Xaml etant le language de balisage utilisé par WPF, on pourrait s'attendre à ce que ce livre ne contienne ce que l'on pourrait considérer comme le "tronc commun" des "languages xaml", et ne puisse servir d'introduction au livre sur le WPF du même auteur, et qu'il ne puisse être que mieux que ce dernier car sorti après lui, au final, il n'en est rien, il semble plutot que ce livre ne soit un livre "quota" écrit par son auteur pour avoir sa sortie de l'année, ce livre est moins complet que WPF 4.5 Unleashed, y compris sur les points correspondant au "tronc commun" des languages xaml et ce alors même qu'il reprends des passages entiers de ce livre, en échange, on a droit à des paragraphes détaillés pour nous expliquer comment définir des formes 3D à la main avec XAML. En clair: à éviter
+    positifs:
+      - Les passages repris à WPF 4.5 Unleashed restent bons
+    negatifs:
+      - Autant lire directement WPF 4.5 Unleashed
+      - Perds du temps sur des détails inutiles
+      - Ne fait pas ce qu'il etait censé faire (on apprends rien sur XAML en plus de ce que l'on trouve déjà dans WPF 4.5 Unleashed)
+
+  - slug: cs10-eni-visual-studio-2022
+    title: Développez des applications Windows avec Visual Studio 2022
+    imageUrl: C10Livre.jpg
+    siteUrl: https://www.editions-eni.fr/livre/c-10-developpez-des-applications-windows-avec-visual-studio-2022-9782409035135
+    note: 1
+    avis: |-
+      Livre mal structuré, qui fait l'exploit d'être à la fois peu abordable pour un débutant et trop superficiel pour quelqu'un qui chercherait à approfondir le language: on explique comment ajouter une référence à une librairie COM avant d'expliquer ce qu'est une variable, et les QCM de fin de chapitre portent sur des details de vocabulaire ou d'implémentation sans interet, j'ai du aller au tiers du livre avant d'arrêter, à ce point là, autant aller directement voir la doc microsoft, c'est tout autant indigeste, mais au moins c'est exhaustif (à noter qu'il on fait une réedition pour c#12, j'ai vu la table des matières, c'est le même livre avec quelques pages qui changent, sans intêret).
+    positifs:
+      - la table des matières semble alléchante sur le papier, aborde non seulement le language mais aussi les thémes connexes (framework ui, linq, la serialisation...)
+    negatifs:
+      - organisation complètement à l'ouest, complexité non progressive
+      - digressions sur les détails techniques, qui font que les points importants qui ne ressortent pas.
+      - manque de clarté et de pédagogie
+      - QCM plutot qu'exercices pratiques, tout aussi au fraises que le reste du livre

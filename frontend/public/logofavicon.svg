@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="16mm"
+   height="16mm"
+   viewBox="0 0 16 16"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="logofavicon.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="5.5436508"
+     inkscape:cx="33.191124"
+     inkscape:cy="70.440945"
+     inkscape:window-width="1150"
+     inkscape:window-height="1211"
+     inkscape:window-x="2651"
+     inkscape:window-y="149"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       d="M 14,14 H 11.5 V 4.8 L 9,10 H 7 L 4.5,4.8 V 14 H 2 V 2 H 4.5 L 8,6.5 11.5,2 H 14 Z"
+       id="text1"
+       style="font-size:3.175px;white-space:pre;inline-size:5.92708;stroke-width:0.264583"
+       aria-label="M.T"
+       sodipodi:nodetypes="cccccccccccccc" />
+  </g>
+</svg>

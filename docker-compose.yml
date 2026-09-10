@@ -1,0 +1,151 @@
+# Stack « site-vitrine » : le site complet — base de données, API, et frontend.
+# Déployée depuis Portainer. Voir README.md pour la marche à suivre.
+#
+# Trois services, trois niveaux d'exposition :
+#   db   : joignable par l'API seule            (réseau internal)
+#   api  : joignable par le frontend seul       (réseau internal)
+#   web  : joignable par Nginx Proxy Manager    (réseaux internal + proxy)
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: sitevitrine-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Volume nommé : les données survivent à la suppression/recréation du conteneur.
+      # C'est LE volume à sauvegarder (cf. README, section Sauvegarde).
+      #
+      # ⚠ Depuis PostgreSQL 18, l'image attend le montage sur /var/lib/postgresql (et non plus
+      # sur /var/lib/postgresql/data) : les données sont rangées dans un sous-dossier portant le
+      # numéro de version majeure, ce qui rend les montées de version par pg_upgrade possibles.
+      # Monter l'ancien chemin fait échouer le démarrage.
+      - pgdata:/var/lib/postgresql
+    networks:
+      - internal
+    healthcheck:
+      # pg_isready est fourni par l'image. Tant qu'il échoue, le conteneur est « unhealthy »
+      # et l'API (qui a un depends_on: service_healthy) n'est pas démarrée.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      # Laisse à PostgreSQL le temps de son initialisation initiale sans compter les échecs.
+      start_period: 30s
+
+  # Conteneur d'initialisation : met le SCHÉMA à niveau, puis s'arrête. Même image que l'API, seule
+  # la commande change (cf. le mode « verbe » de Program.cs).
+  #
+  # Pourquoi un conteneur séparé plutôt qu'une migration au démarrage de l'API :
+  #   - l'API ne démarre que sur un schéma déjà correct ;
+  #   - un échec de migration se voit comme un conteneur en erreur, et la stack s'arrête là, au lieu
+  #     d'une API qui redémarre en boucle ;
+  #   - le CONTENU n'est pas concerné : il ne se charge jamais tout seul (voir README § Contenu).
+  api-init:
+    build:
+      context: ./backend
+    image: ${API_IMAGE:-sitevitrine-api:latest}
+    container_name: sitevitrine-api-init
+    # Une tâche ponctuelle : ne pas relancer le conteneur quand il sort normalement.
+    restart: 'no'
+    command: ['migrate']
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: >-
+        Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    networks:
+      - internal
+
+  api:
+    # `build` + `image` : construit l'image depuis ce dépôt et la tague. Si tu préfères publier
+    # les images dans un registre (GHCR…) et ne faire que les tirer sur le serveur, supprime les
+    # blocs `build` et pointe `image` sur le registre.
+    build:
+      context: ./backend
+    image: ${API_IMAGE:-sitevitrine-api:latest}
+    container_name: sitevitrine-api
+    restart: unless-stopped
+    depends_on:
+      # `service_completed_successfully` : on attend que la migration soit allée au bout (code 0).
+      # Si elle échoue, l'API n'est pas démarrée du tout.
+      api-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Le double underscore encode la hiérarchie de la configuration .NET :
+      # ConnectionStrings__Default  ->  { "ConnectionStrings": { "Default": ... } }
+      # `Host=db` est le nom du service ci-dessus : le DNS interne de Docker le résout.
+      ConnectionStrings__Default: >-
+        Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    volumes:
+      # Le contenu éditorial, hors de l'image : corriger un avis = éditer ce fichier et relancer un
+      # import, sans reconstruire quoi que ce soit. Monté en lecture seule — l'API n'écrit jamais
+      # dedans, l'export passe par la sortie standard ou par le back-office.
+      - ./content:/app/content:ro
+    ports:
+      # Back-office, publié UNIQUEMENT sur la boucle locale du serveur : injoignable depuis le
+      # réseau, y compris depuis Nginx Proxy Manager. L'accès se fait par tunnel SSH :
+      #   ssh -L 8081:127.0.0.1:8081 user@serveur   puis   http://localhost:8081/scalar
+      # Le port public 8080 n'est pas publié : seul le conteneur `web` y accède, par le réseau interne.
+      - '127.0.0.1:8081:8081'
+    networks:
+      - internal
+    healthcheck:
+      # /health interroge réellement PostgreSQL (AddDbContextCheck) : « healthy » signifie donc
+      # bien « prête à répondre ». wget est fourni par busybox dans l'image Alpine.
+      test: ['CMD-SHELL', 'wget --spider -q http://localhost:8080/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Couvre l'application des migrations au démarrage.
+      start_period: 60s
+
+  web:
+    build:
+      context: ./frontend
+    image: ${WEB_IMAGE:-sitevitrine-web:latest}
+    container_name: sitevitrine-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        # Nginx résout « api » au démarrage : attendre que l'API soit saine évite un premier
+        # démarrage en échec.
+        condition: service_healthy
+    networks:
+      - internal # pour relayer /api vers l'API
+      - proxy    # pour être joignable par Nginx Proxy Manager
+    healthcheck:
+      # 127.0.0.1 et non `localhost` : dans le conteneur, `localhost` résout d'abord vers ::1, or
+      # Nginx n'écoute qu'en IPv4 (`listen 80;` dans nginx.conf) — la sonde recevrait un
+      # « Connection refused » et le conteneur resterait éternellement unhealthy alors qu'il sert
+      # parfaitement. L'API n'a pas ce souci : Kestrel écoute en double pile.
+      test: ['CMD-SHELL', 'wget --spider -q http://127.0.0.1/ || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # `web` ne publie rien : NPM le joint par le réseau `proxy`. Pour le tester en local sans NPM,
+    # ne pas décommenter ici — passer par docker-compose.override.yml, que Compose charge
+    # automatiquement en plus de ce fichier et qui reste propre à ta machine.
+    #
+    # ⚠ Ne pas réutiliser 8081 : c'est le port du back-office de `api` (voir plus haut).
+
+volumes:
+  pgdata:
+
+networks:
+  # Réseau privé de la stack, créé automatiquement.
+  internal:
+    driver: bridge
+  # Réseau EXISTANT, celui de Nginx Proxy Manager : il n'est pas créé par cette stack, on s'y
+  # raccroche. Vérifier son nom exact dans Portainer → Networks (souvent `npm_default`) et
+  # l'indiquer via PROXY_NETWORK dans les variables de la stack.
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-npm_default}

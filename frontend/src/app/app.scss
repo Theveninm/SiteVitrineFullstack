@@ -1,0 +1,22 @@
+// :host = l'élément <app-root> lui-même. On le fait occuper toute la hauteur de l'écran
+// en colonne pour que le footer (margin-top: auto) reste collé en bas même sur une page
+// courte, sans avoir besoin de position: fixed.
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// sticky sur <app-header> (pas sur .header à l'intérieur) : un enfant sticky ne peut
+// coller que dans la hauteur de son parent. Si le parent a la même hauteur que le
+// header, sticky ne fait rien. Ici le host du composant participe au scroll de la page.
+app-header {
+  display: block; // les custom elements sont inline par défaut ; sticky exige un bloc
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-content {
+  flex: 1;
+}

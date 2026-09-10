@@ -1,0 +1,180 @@
+.header {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+
+  &__brand {
+    font-family: 'Tahoma', sans-serif;
+    font-size: 2.5rem;
+    text-decoration: none;
+    margin: -1rem;
+  }
+
+  // Éléments mobile-only : seuls display: none ici ; le reste vit dans le @media.
+  &__toggle,
+  &__backdrop,
+  &__link-label {
+    display: none;
+  }
+
+  &__nav {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  &__link {
+    text-decoration: none;
+    color: inherit;
+    padding-bottom: 0.25rem;
+    border-bottom: 2px solid transparent;
+
+    &:hover {
+      border-bottom-color: #ccc;
+    }
+
+    &--active {
+      border-bottom-color: currentColor;
+      font-weight: 600;
+    }
+
+    // Icônes SVG : taille fixe, currentColor suit la couleur du lien.
+    &--icon {
+      display: inline-flex;
+      align-items: center;
+      line-height: 0;
+
+      svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+  }
+}
+
+// --- Mobile : hamburger + panneau vertical en overlay ---
+@media (max-width: 768px) {
+  .header {
+    padding: 0.75rem 1.25rem;
+
+    &__brand {
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    &__toggle {
+      display: flex;
+      position: relative;
+      z-index: 2;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0.4rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    &__toggle-bar {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: currentColor;
+      transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+    }
+
+    // Animation hamburger → croix quand le menu est ouvert.
+    &--menu-open &__toggle-bar {
+      &:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+      }
+
+      &:nth-child(2) {
+        opacity: 0;
+      }
+
+      &:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+      }
+    }
+
+    // Voile sombre léger : le contenu du site reste visible derrière.
+    &__backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    &__nav {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 2;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 0.5rem 0;
+      // Fermé par défaut : hors écran / non interactif.
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(-0.5rem);
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s;
+
+      &--open {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    &__link {
+      padding: 0.85rem 1.5rem;
+      border-bottom: none;
+      border-left: 3px solid transparent;
+
+      &:hover {
+        border-bottom-color: transparent;
+        background: rgba(0, 0, 0, 0.04);
+      }
+
+      &--active {
+        border-bottom-color: transparent;
+        border-left-color: currentColor;
+      }
+
+      &--icon {
+        width: 100%;
+        gap: 0.6rem;
+        line-height: 1.4;
+      }
+    }
+
+    &__link-label {
+      display: inline;
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Règles communes au dépôt. Chaque sous-projet garde les siennes :
+#   frontend/.gitignore  (node_modules, dist, cache Angular…)
+#   backend/.gitignore   (bin, obj, .env)
+# Un .gitignore s'applique à son dossier et à ses sous-dossiers, et les motifs commençant
+# par « / » y sont ancrés — les trois fichiers cohabitent donc sans se marcher dessus.
+
+# Secrets de la stack Docker (voir .env.example pour la liste des variables attendues).
+.env
+
+# Documents personnels stockés dans ce dossier mais qui ne font pas partie du site.
+CV*.pdf
+/bilan competences claude/
+
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+
+# Reglages Compose propres a une machine (ports publies pour tester en local).
+docker-compose.override.yml

@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+*.user
+
+# Secrets : jamais versionnés (cf. .env.example pour la liste des variables attendues).
+.env

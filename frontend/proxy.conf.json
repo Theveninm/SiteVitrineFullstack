@@ -1,0 +1,7 @@
+{
+  "//": "Utilisé uniquement par `ng serve`. Le serveur de dev relaie les appels /api vers l'API .NET locale, ce qui reproduit la configuration de production (frontend et API sur la même origine, route /api aiguillée par Nginx Proxy Manager). Conséquence : le code Angular utilise l'URL relative /api partout, sans variable d'environnement ni CORS.",
+  "/api": {
+    "target": "http://localhost:5080",
+    "secure": false
+  }
+}

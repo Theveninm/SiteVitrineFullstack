@@ -1,0 +1,10 @@
+# Ces chemins ne sont jamais envoyés au démon Docker : build plus rapide, et surtout aucun
+# risque d'embarquer des binaires compilés sous Windows dans une image Linux.
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+.git/
+.gitignore
+README.md

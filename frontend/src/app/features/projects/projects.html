@@ -1,0 +1,33 @@
+<section class="projects">
+  <h1>Projets</h1>
+  <p class="projects__intro">
+    J'espère compléter davantage cette section par la suite ; en attendant, vous trouverez ici les
+    projets les plus importants que j'ai réalisés ainsi que les technologies principales utilisées
+    pour ces derniers.
+  </p>
+
+  <!-- track title : les titres de projets sont uniques et stables, pas besoin d'un id dédié. -->
+  <div class="projects__list">
+    @for (project of projects; track project.title) {
+      <article class="project">
+        <h2>{{ project.title }}</h2>
+        <p class="project__description">{{ project.description }}</p>
+
+        <div class="project__techs-block">
+          <h3>Principales technologies</h3>
+          <ul class="project__techs">
+            @for (tech of project.techs; track tech) {
+              <li>{{ tech }}</li>
+            }
+          </ul>
+        </div>
+
+        <div class="project__links">
+          @if (project.githubUrl) {
+            <a [href]="project.githubUrl" target="_blank" rel="noopener noreferrer">Voir sur GitHub</a>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</section>

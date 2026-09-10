@@ -1,0 +1,86 @@
+.projects {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+
+  h1 {
+    margin: 0 0 1rem;
+  }
+
+  &__intro {
+    line-height: 1.6;
+    font-style: italic;
+    font-weight: 600;
+    text-align: justify;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.project {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 0;
+
+  // Trait horizontal centré entre les projets (pas sur le dernier).
+  &:not(:last-child)::after {
+    content: '';
+    display: block;
+    width: 40%;
+    margin: 2rem auto 0;
+    border-bottom: 1px solid #c8c8c8;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  &__description {
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  &__techs-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #444;
+    }
+  }
+
+  &__techs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      font-size: 0.8rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: #f0f0f0;
+    }
+  }
+
+  &__links {
+    display: flex;
+    gap: 1rem;
+
+    a {
+      color: inherit;
+      font-weight: 600;
+    }
+  }
+}

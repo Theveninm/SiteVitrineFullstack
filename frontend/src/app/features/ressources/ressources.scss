@@ -1,0 +1,165 @@
+.ressources {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+
+  h1 {
+    margin: 0 0 1rem;
+  }
+
+  &__intro {
+    line-height: 1.6;
+    font-style: italic;
+    font-weight: 600;
+    text-align: justify;
+  }
+
+  // Messages d'état de la liste : chargement, erreur, section vide.
+  &__status {
+    opacity: 0.7;
+
+    &--error {
+      opacity: 1;
+      color: #c62828;
+    }
+  }
+
+  &__retry {
+    margin-left: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid currentcolor;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.resource {
+  padding: 2rem 0;
+
+  // Trait à 40 %, centré. Fonctionne car .resource n'est PAS en flex
+  // (le flex est sur .resource__row juste en dessous).
+  &:not(:last-child)::after {
+    content: '';
+    display: block;
+    width: 40%;
+    margin: 2rem auto 0;
+    border-bottom: 1px solid #c8c8c8;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    @media (max-width: 560px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  &__media {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    width: 160px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  &__image {
+    width: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  &__link-label {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  &__content {
+    flex: 1;
+    line-height: 0.6;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  &__rating {
+    color: #ccc;
+    font-size: 1.1rem;
+    letter-spacing: 0.1rem;
+  }
+
+  &__star--filled {
+    color: #e8b400;
+  }
+
+  &__avis {
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  &__pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__positifs,
+  &__negatifs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+
+    li {
+      position: relative;
+      padding-left: 1.25rem;
+    }
+
+    li::before {
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+    }
+  }
+
+  &__positifs li::before {
+    content: '+';
+    color: #1a8a3c;
+  }
+
+  &__negatifs li::before {
+    content: '−';
+    color: #c62828;
+  }
+}
