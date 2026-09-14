@@ -90,17 +90,41 @@ app.UseExceptionHandler();
 var adminPort = builder.Configuration.GetValue("Admin:Port", 8081);
 app.UseAdminPortIsolation(adminPort);
 
-// Derrière Nginx Proxy Manager, l'IP et le schéma vus par Kestrel sont ceux du proxy.
-// Ce middleware réécrit ces informations à partir des en-têtes X-Forwarded-* transmis par NPM,
-// pour que les logs et les URL générées reflètent la vraie requête cliente.
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+// La chaîne en production : visiteur → Nginx Proxy Manager (TLS) → Nginx du conteneur `web` → API.
+// Kestrel ne voit que le dernier maillon : l'IP du conteneur `web`, et du HTTP. Ce middleware
+// reconstitue la requête d'origine (Connection.RemoteIpAddress, Request.Scheme) à partir des en-têtes
+// X-Forwarded-*, pour que les logs, les URL générées et tout ce qui s'appuie sur l'IP ou le schéma du
+// visiteur voient le vrai client. Il doit donc précéder tout middleware qui les lit.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    // Le proxy est sur le réseau Docker : sa plage d'IP n'est pas connue à l'avance, on lève
-    // donc la restriction par défaut. Sans danger tant que l'API n'est pas exposée directement.
-    KnownIPNetworks = { },
-    KnownProxies = { },
-});
+
+    // Chaque proxy ajoute à DROITE de X-Forwarded-For l'adresse qui l'a contacté : l'API reçoit
+    // « visiteur, NPM ». Le middleware lit la liste de droite à gauche, sur ForwardLimit entrées —
+    // autant que de proxys de confiance. Avec la valeur par défaut (1), il s'arrêterait sur l'IP de NPM.
+    // Pas plus de 2 non plus : ce qui est à gauche du visiteur, c'est le visiteur qui l'a écrit (un
+    // « X-Forwarded-For: 1.2.3.4 » envoyé à NPM y est conservé), donc falsifiable.
+    // ⚠ À ajuster si un maillon apparaît ou disparaît (un CDN devant NPM, par exemple).
+    ForwardLimit = 2,
+};
+
+// Par défaut, le middleware ne croit que les proxys en boucle locale (127.0.0.0/8 et ::1) : venus
+// d'ailleurs, les en-têtes sont ignorés. Les nôtres ont des IP Docker non connues à l'avance : on vide
+// les deux listes, et tout expéditeur est alors cru, dans la limite de ForwardLimit.
+//
+// ⚠ Clear(), surtout pas « KnownIPNetworks = { } » dans l'initialiseur : sur une propriété sans setter,
+// cette syntaxe (initialiseur de collection) AJOUTE les éléments listés — aucun ici — sans rien
+// retirer. La boucle locale restait alors seule autorisée, et les en-têtes venus du conteneur `web`
+// étaient ignorés sans la moindre erreur.
+//
+// Hypothèse de confiance, garantie par docker-compose.yml : le port 8080 n'est joignable que par `web`
+// (réseau `internal`, rien de publié), et `web` que par ce qui partage le réseau de NPM. Un autre
+// conteneur branché sur ce réseau pourrait donc s'attribuer une IP arbitraire ; le port 8081 aussi,
+// mais il n'est joignable que depuis l'hôte.
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.MapHealthChecks("/health");
 
