@@ -88,37 +88,67 @@ migration, ou modifier le contenu des ressources.
 
 ## Déploiement (Portainer)
 
-### 1. Repérer le réseau de Nginx Proxy Manager
+Tout se fait depuis trois interfaces graphiques, sans ligne de commande :
 
-**Portainer → Networks.** Noter le nom du réseau auquel appartient le conteneur NPM (souvent
-`npm_default`). Il est référencé comme réseau `external` dans `docker-compose.yml` : le nom doit
-être exact, sinon la stack refuse de démarrer.
+| Outil | Rôle |
+| ----- | ---- |
+| **Portainer** | stacks, conteneurs, logs |
+| **Nginx Proxy Manager** | domaine et certificat TLS |
+| **VS Code + Remote-SSH** | fichiers du serveur, et accès au back-office (redirection de port) |
 
-### 2. Créer la stack
+### 1. Repérer le réseau de Nginx Proxy Manager et un port libre
 
-**Portainer → Stacks → Add stack**, nom `site-vitrine`.
+**Portainer → Networks.** Noter le nom du réseau auquel appartient le conteneur NPM (par exemple
+`nginx-proxy-manager_default`). Il est référencé comme réseau `external` dans `docker-compose.yml` :
+le nom doit être exact, sinon la stack refuse de démarrer.
 
-- **Méthode recommandée — _Repository_** : URL du dépôt Git, `docker-compose.yml` comme
-  _Compose path_. Portainer clone le dépôt sur le serveur et construit les deux images lui-même.
-  Les mises à jour se font ensuite d'un clic sur **Pull and redeploy**.
-- **Alternative — _Web editor_** : coller le contenu de `docker-compose.yml`. Le serveur n'a alors
-  pas les sources : il faut supprimer les blocs `build:` et pointer les `image:` sur des images
-  déjà publiées dans un registre.
+**Portainer → Containers**, colonne _Published Ports_ : vérifier que `127.0.0.1:8081` n'est pas
+déjà pris par une autre stack. Sinon, choisir un autre port pour `ADMIN_PORT` (étape 4).
 
-### 3. Variables d'environnement
+### 2. Déposer le fichier de contenu sur le serveur
 
-Dans la section **Environment variables** de la stack, saisir les entrées de `.env.example` :
+Portainer clone le dépôt **à l'intérieur de son propre conteneur** : le dossier `content/` du dépôt
+n'existe pas pour le Docker de l'hôte, et un montage `./content` y serait vide. Le fichier de
+contenu vit donc dans un dossier ordinaire du serveur, désigné par `CONTENT_DIR`.
+
+1. VS Code → **Remote Explorer** → **SSH** → se connecter au serveur ;
+2. **File → Open Folder** → `/root` ;
+3. dans l'explorateur de fichiers de VS Code, créer `site-vitrine/content/` ;
+4. y glisser-déposer `content/resources.yaml` depuis l'explorateur Windows.
+
+C'est ce fichier-là qui fait foi en production, et qu'on édite ensuite (toujours dans VS Code).
+
+### 3. Créer la stack
+
+**Portainer → Stacks → Add stack**, nom `site-vitrine`, méthode **Repository** :
+
+| Champ | Valeur |
+| ----- | ------ |
+| Repository URL | URL HTTPS du dépôt GitHub |
+| Repository reference | `refs/heads/master` |
+| Compose path | `docker-compose.yml` |
+| Authentication | désactivée (dépôt public) |
+
+Portainer clone le dépôt et construit les deux images lui-même.
+
+### 4. Variables d'environnement
+
+Dans la section **Environment variables** de la stack, cliquer sur **Advanced mode**, coller
+`.env.example`, puis adapter :
 
 | Variable | Valeur |
 | -------- | ------ |
 | `POSTGRES_DB` | `sitevitrine` |
 | `POSTGRES_USER` | `sitevitrine` |
-| `POSTGRES_PASSWORD` | mot de passe long et aléatoire (`openssl rand -base64 32`) |
+| `POSTGRES_PASSWORD` | mot de passe long et aléatoire (généré par un gestionnaire de mots de passe) |
 | `PROXY_NETWORK` | nom relevé à l'étape 1 |
+| `ADMIN_PORT` | `8081`, ou le port libre choisi à l'étape 1 |
+| `CONTENT_DIR` | `/root/site-vitrine/content` (chemin **absolu**, cf. étape 2) |
 | `API_IMAGE` | `sitevitrine-api:latest` |
 | `WEB_IMAGE` | `sitevitrine-web:latest` |
 
-Puis **Deploy the stack**.
+Puis **Deploy the stack**. Le premier déploiement prend plusieurs minutes : il télécharge le SDK
+.NET et les paquets npm pour compiler les images.
 
 Les services démarrent en cascade : `db` doit être saine avant que `api-init` ne migre le schéma,
 `api-init` doit être **sorti en succès** avant `api`, et `api` doit être saine avant `web`. Si la
@@ -129,72 +159,77 @@ jour.` puis la sortie du conteneur ; dans ceux de `sitevitrine-api`,
 `Now listening on: http://[::]:8080`. `db`, `api` et `web` doivent finir en `healthy`, `api-init`
 en `exited (0)`.
 
-### 4. Charger le contenu (premier déploiement seulement)
+### 5. Accéder au back-office
 
-La base est vide : la migration crée le schéma, elle n'insère **aucune** donnée. C'est voulu — un
-redéploiement ne doit jamais écraser silencieusement du contenu.
+Le back-office n'est publié que sur `127.0.0.1:<ADMIN_PORT>` du serveur. VS Code sait l'amener sur
+ton poste :
 
-```bash
-docker compose run --rm api import
-```
+1. fenêtre VS Code connectée au serveur (étape 2) → panneau **Ports** (à côté du Terminal) ;
+2. **Forward a Port** → saisir la valeur de `ADMIN_PORT` ;
+3. ouvrir `http://localhost:<ADMIN_PORT>/scalar` dans le navigateur.
 
-Ou, une fois le tunnel SSH ouvert (étape 6), le bouton `POST /admin/content/import` dans
-`http://localhost:8081/scalar`. Le résultat indique ce qui a été créé, mis à jour, ou laissé tel
-quel. La commande est rejouable sans risque.
+Tant que la fenêtre VS Code reste connectée, le tunnel reste ouvert. L'équivalent en ligne de
+commande est `ssh -L <ADMIN_PORT>:127.0.0.1:<ADMIN_PORT> utilisateur@serveur`.
 
-### 5. Publier le domaine dans Nginx Proxy Manager
-
-Un seul **Proxy Host** :
-
-| Champ | Valeur |
-| ----- | ------ |
-| Domain Names | `mondomaine.fr` |
-| Scheme | `http` |
-| Forward Hostname | `sitevitrine-web` |
-| Forward Port | `80` |
-| Websockets Support | activé |
-| SSL | demander un certificat Let's Encrypt, puis **Force SSL** |
-
-Rien à configurer pour `/api` : c'est le Nginx du conteneur `web` qui s'en charge. Pour que NPM
-résolve `sitevitrine-web`, son conteneur doit partager le réseau `PROXY_NETWORK` (étape 1).
-
-Vérification depuis un poste client :
-
-```bash
-curl -s https://mondomaine.fr/api/resources | head -c 200
-```
-
-### 6. Accéder au back-office
-
-Le port `8081` n'est publié que sur `127.0.0.1` du serveur : il faut donc s'y rendre depuis le
-serveur lui-même, ou ouvrir un tunnel depuis ton poste :
-
-```bash
-ssh -L 8081:127.0.0.1:8081 utilisateur@serveur
-```
-
-Puis `http://localhost:8081/scalar` : l'interface liste tous les endpoints avec leurs formulaires
-— état de la base, import et export du contenu. Détail dans
-[`backend/README.md`](backend/README.md#back-office-port-8081).
+L'interface Scalar liste tous les endpoints avec leurs formulaires — état de la base, import et
+export du contenu. Détail dans [`backend/README.md`](backend/README.md#back-office-port-8081).
 
 Il n'y a **ni compte ni mot de passe** : la sécurité repose entièrement sur le fait que ce port
 n'est pas joignable depuis le réseau. Ne jamais le publier sur `0.0.0.0` ni le déclarer dans NPM
 sans avoir d'abord ajouté une authentification.
 
-### 7. Mettre à jour
+### 6. Charger le contenu (premier déploiement seulement)
 
-**Portainer → Stacks → site-vitrine → Pull and redeploy**, en cochant **Re-pull image and
-redeploy**. Le volume `pgdata` n'est pas touché : les données sont conservées, et seules les
-migrations en attente sont appliquées par `api-init`. Compose ne recrée que les services dont
-l'image ou la définition a changé — modifier le frontend ne redémarre donc ni l'API ni la base.
+La base est vide : la migration crée le schéma, elle n'insère **aucune** donnée. C'est voulu — un
+redéploiement ne doit jamais écraser silencieusement du contenu.
 
-> ⚠️ **Sans reconstruction explicite, l'ancien code est redéployé sans prévenir.** `docker compose
-> up` réutilise l'image existante tant que son tag n'a pas changé, même si les sources ont été
-> modifiées. En ligne de commande, c'est `docker compose up -d --build`. Le symptôme typique est
-> une trace d'erreur qui mentionne un fichier source que tu as supprimé.
+Dans Scalar :
 
-Le **contenu** n'est pas concerné par un redéploiement : il n'est jamais rechargé tout seul. Après
-avoir édité `content/resources.yaml`, relancer l'import (étape 4).
+1. `GET /admin/status` → vérifier `contentFile.exists: true`. Si `false`, `CONTENT_DIR` ne pointe
+   pas sur le dossier de l'étape 2 ;
+2. `POST /admin/content/import` → le rapport indique ce qui a été créé, mis à jour ou laissé tel
+   quel. L'opération est rejouable sans risque.
+
+### 7. Publier le domaine dans Nginx Proxy Manager
+
+**Hosts → Proxy Hosts → Add Proxy Host** :
+
+| Champ | Valeur |
+| ----- | ------ |
+| Domain Names | le domaine (ou un sous-domaine de test, voir ci-dessous) |
+| Scheme | `http` |
+| Forward Hostname / IP | `sitevitrine-web` |
+| Forward Port | `80` |
+| Block Common Exploits | activé |
+| Onglet SSL | _Request a new SSL Certificate_, puis **Force SSL** |
+
+Rien à configurer pour `/api` : c'est le Nginx du conteneur `web` qui s'en charge. Pour que NPM
+résolve `sitevitrine-web`, son conteneur doit partager le réseau `PROXY_NETWORK` (étape 1).
+
+**Remplacer un site déjà en ligne sans coupure** : publier d'abord sur un sous-domaine de test
+(enregistrement DNS `A` vers l'IP du serveur, chez le registrar), valider, puis **éditer** le proxy
+host existant du domaine principal pour lui donner `sitevitrine-web` / `80` comme cible. Supprimer
+ensuite le proxy host de test et l'ancienne stack.
+
+Vérification dans le navigateur : la page Ressources affiche les avis, et
+`https://<domaine>/api/resources` renvoie du JSON.
+
+### 8. Mettre à jour
+
+**Le code** : pousser sur GitHub, puis **Portainer → Stacks → site-vitrine → Pull and redeploy**.
+Le volume `pgdata` n'est pas touché : les données sont conservées, et seules les migrations en
+attente sont appliquées par `api-init`. Compose ne recrée que les services dont l'image ou la
+définition a changé — modifier le frontend ne redémarre donc ni l'API ni la base.
+
+> ⚠️ **Sans reconstruction, l'ancien code est redéployé sans prévenir.** Compose réutilise l'image
+> existante tant que son tag n'a pas changé, même si les sources ont été modifiées. Après un
+> redéploiement, vérifier dans **Portainer → Images** que `sitevitrine-api` / `sitevitrine-web` ont
+> une date de création récente. Le symptôme typique d'un oubli est une trace d'erreur qui mentionne
+> un fichier source supprimé.
+
+**Le contenu** n'est pas concerné par un redéploiement : il n'est jamais rechargé tout seul. Éditer
+`/root/site-vitrine/content/resources.yaml` dans VS Code (fenêtre Remote-SSH), puis relancer
+l'import (étape 6). Pour garder le dépôt à jour, recopier ensuite le fichier dans `content/`.
 
 ---
 

@@ -87,13 +87,21 @@ services:
       # Le contenu éditorial, hors de l'image : corriger un avis = éditer ce fichier et relancer un
       # import, sans reconstruire quoi que ce soit. Monté en lecture seule — l'API n'écrit jamais
       # dedans, l'export passe par la sortie standard ou par le back-office.
-      - ./content:/app/content:ro
+      #
+      # CONTENT_DIR vaut ./content en local, mais DOIT être un chemin absolu de l'hôte sous
+      # Portainer : Portainer clone le dépôt à l'intérieur de son propre conteneur (/data/compose/N),
+      # un chemin que le démon Docker de l'hôte ne connaît pas. Un `./content` y serait résolu en un
+      # dossier vide créé à la volée, et l'import échouerait faute de fichier.
+      - ${CONTENT_DIR:-./content}:/app/content:ro
     ports:
       # Back-office, publié UNIQUEMENT sur la boucle locale du serveur : injoignable depuis le
-      # réseau, y compris depuis Nginx Proxy Manager. L'accès se fait par tunnel SSH :
-      #   ssh -L 8081:127.0.0.1:8081 user@serveur   puis   http://localhost:8081/scalar
+      # réseau, y compris depuis Nginx Proxy Manager. L'accès se fait par tunnel SSH (ou par la
+      # redirection de ports de VS Code Remote-SSH), puis http://localhost:<ADMIN_PORT>/scalar.
       # Le port public 8080 n'est pas publié : seul le conteneur `web` y accède, par le réseau interne.
-      - '127.0.0.1:8081:8081'
+      #
+      # ADMIN_PORT ne change que le port côté hôte (utile si 8081 y est déjà pris par une autre
+      # stack) ; dans le conteneur, le back-office reste sur 8081.
+      - '127.0.0.1:${ADMIN_PORT:-8081}:8081'
     networks:
       - internal
     healthcheck:
@@ -144,8 +152,8 @@ networks:
   internal:
     driver: bridge
   # Réseau EXISTANT, celui de Nginx Proxy Manager : il n'est pas créé par cette stack, on s'y
-  # raccroche. Vérifier son nom exact dans Portainer → Networks (souvent `npm_default`) et
-  # l'indiquer via PROXY_NETWORK dans les variables de la stack.
+  # raccroche. Son nom dépend de la façon dont NPM a été installé : le vérifier dans
+  # Portainer → Networks et l'indiquer via PROXY_NETWORK dans les variables de la stack.
   proxy:
     external: true
-    name: ${PROXY_NETWORK:-npm_default}
+    name: ${PROXY_NETWORK:-nginx-proxy-manager_default}
