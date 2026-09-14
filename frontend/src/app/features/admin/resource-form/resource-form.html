@@ -1,0 +1,106 @@
+<section class="admin-page">
+  <a class="resource-form__back" routerLink="/admin">← Retour à la liste</a>
+  <h1>{{ editedSlug ? 'Modifier la ressource' : 'Nouvelle ressource' }}</h1>
+
+  <!-- Chaîne exclusive : value() d'un httpResource en erreur lève une exception (cf. page Ressources). -->
+  @if (existing.error()) {
+    <p class="admin-form__error">Ressource introuvable.</p>
+  } @else if (existing.isLoading()) {
+    <p>Chargement…</p>
+  } @else {
+    <form class="admin-form" [formRoot]="resourceForm">
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="title">Titre</label>
+        <input id="title" class="admin-form__input" [formField]="resourceForm.title" />
+        <app-field-error [field]="resourceForm.title" />
+      </div>
+
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="slug">Slug</label>
+        <p class="admin-form__hint">Identifiant stable, utilisé dans les adresses de l'API.</p>
+        <input id="slug" class="admin-form__input" [formField]="resourceForm.slug" />
+        <app-field-error [field]="resourceForm.slug" />
+      </div>
+
+      <div class="admin-form__field">
+        <span class="admin-form__label">Image</span>
+        <!-- Composant maison branché comme un input natif : il implémente FormValueControl. -->
+        <app-image-drop [formField]="resourceForm.imageFile" />
+        <app-field-error [field]="resourceForm.imageFile" />
+      </div>
+
+      <div class="resource-form__row">
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="siteUrl">Site officiel</label>
+          <input
+            id="siteUrl"
+            class="admin-form__input"
+            type="url"
+            placeholder="https://…"
+            [formField]="resourceForm.siteUrl"
+          />
+          <app-field-error [field]="resourceForm.siteUrl" />
+        </div>
+
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="note">Note sur 5</label>
+          <!-- type="number" : Signal Forms convertit la saisie en nombre pour le modèle. -->
+          <input
+            id="note"
+            class="admin-form__input"
+            type="number"
+            step="0.5"
+            [formField]="resourceForm.note"
+          />
+          <app-field-error [field]="resourceForm.note" />
+        </div>
+      </div>
+
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="avis">Avis</label>
+        <textarea id="avis" class="admin-form__input" rows="8" [formField]="resourceForm.avis"></textarea>
+        <app-field-error [field]="resourceForm.avis" />
+      </div>
+
+      <div class="resource-form__row">
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="positifs">Points positifs</label>
+          <p class="admin-form__hint">Un point par ligne.</p>
+          <textarea
+            id="positifs"
+            class="admin-form__input"
+            rows="5"
+            [formField]="resourceForm.positifs"
+          ></textarea>
+        </div>
+
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="negatifs">Points négatifs</label>
+          <p class="admin-form__hint">Un point par ligne.</p>
+          <textarea
+            id="negatifs"
+            class="admin-form__input"
+            rows="5"
+            [formField]="resourceForm.negatifs"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Erreurs du serveur qui ne concernent aucun champ en particulier. -->
+      @for (error of resourceForm().errors(); track $index) {
+        <p class="admin-form__error" role="alert">{{ error.message }}</p>
+      }
+
+      <div class="admin-form__actions">
+        <button
+          type="submit"
+          class="admin-button admin-button--primary"
+          [disabled]="resourceForm().submitting()"
+        >
+          Enregistrer
+        </button>
+        <a class="admin-button" routerLink="/admin">Annuler</a>
+      </div>
+    </form>
+  }
+</section>

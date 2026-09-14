@@ -1,0 +1,7 @@
+<!-- Un FieldTree s'appelle comme une fonction pour obtenir l'état du champ : field()() ici, puisque
+     field est lui-même un input signal. -->
+@let state = field()();
+
+@if (state.touched() && state.errors().length > 0) {
+  <p class="field-error" role="alert">{{ state.errors()[0].message }}</p>
+}

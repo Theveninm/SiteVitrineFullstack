@@ -31,11 +31,17 @@ WORKDIR /app
 # qui pollue les logs. ~2 Mo pour s'en débarrasser.
 RUN apk add --no-cache krb5-libs
 
+# Dossier des données écrites par l'API (volume `storage` du compose), créé au nom de l'utilisateur de
+# l'application. Un volume nommé VIDE recopie, à sa création, le contenu et les droits du dossier de
+# l'image sur lequel il est monté : sans cette ligne il appartiendrait à root, et l'API, qui ne tourne
+# pas en root, ne pourrait pas y écrire.
+RUN mkdir -p /app/storage && chown "$APP_UID" /app/storage
+
 # Les images .NET écoutent sur 8080 par défaut (et non 80) justement pour pouvoir tourner
 # sans privilèges root — se lier à un port < 1024 en exigerait.
 #
 # Deux ports, deux surfaces : 8080 sert le site (lecture seule, c'est lui que Nginx relaie),
-# 8081 sert le back-office. Le compose ne publie 8081 que sur 127.0.0.1, et le middleware
+# 8081 sert l'administration technique. Le compose ne publie 8081 que sur 127.0.0.1, et le middleware
 # UseAdminPortIsolation refuse les routes d'administration arrivées sur 8080.
 ENV ASPNETCORE_HTTP_PORTS="8080;8081"
 EXPOSE 8080 8081

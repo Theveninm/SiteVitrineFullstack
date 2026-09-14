@@ -1,0 +1,53 @@
+<section class="admin-page resource-list">
+  <header class="resource-list__header">
+    <h1>Livres &amp; outils</h1>
+    <div class="resource-list__actions">
+      <a class="admin-button admin-button--primary" routerLink="nouvelle">Nouvelle ressource</a>
+      <button type="button" class="admin-button" (click)="logout()">Se déconnecter</button>
+    </div>
+  </header>
+
+  <p class="admin-form__hint">Glisser une ligne pour changer l'ordre d'affichage sur le site.</p>
+
+  @if (error()) {
+    <p class="admin-form__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (resources.error()) {
+    <p class="admin-form__error">Impossible de charger les ressources.</p>
+  } @else {
+    <!-- cdkDropList : conteneur dont les éléments cdkDrag sont réordonnables. La CDK anime le
+         déplacement, mais ne touche pas aux données : c'est drop() qui réordonne le tableau.
+         cdkDragPreviewContainer="parent" : l'élément en cours de glisser reste dans ce composant au
+         lieu d'être déplacé dans <body>, donc à portée de ses styles. -->
+    <ol
+      class="resource-list__items"
+      cdkDropList
+      cdkDropListLockAxis="y"
+      (cdkDropListDropped)="drop($event)"
+    >
+      @for (resource of items(); track resource.slug) {
+        <li class="resource-list__item" cdkDrag cdkDragPreviewContainer="parent">
+          <span class="resource-list__grip" aria-hidden="true">⠿</span>
+
+          @if (resource.imageFile) {
+            <img class="resource-list__thumb" [src]="imageSrc(resource.imageFile)" alt="" />
+          } @else {
+            <span class="resource-list__thumb"></span>
+          }
+
+          <span class="resource-list__title">{{ resource.title }}</span>
+
+          <a class="admin-button" [routerLink]="['modifier', resource.slug]">Modifier</a>
+          <button
+            type="button"
+            class="admin-button admin-button--danger"
+            (click)="remove(resource)"
+          >
+            Supprimer
+          </button>
+        </li>
+      }
+    </ol>
+  }
+</section>

@@ -1,12 +1,13 @@
 using SiteVitrine.Api.Content;
 using SiteVitrine.Api.Data;
+using SiteVitrine.Api.Images;
 
 namespace SiteVitrine.Api.Admin;
 
 /// <summary>
 /// Les tâches d'administration en ligne de commande. Lancée avec un verbe, l'application exécute
 /// la tâche puis s'arrête au lieu de servir des requêtes — c'est le mécanisme du conteneur
-/// d'initialisation, et de fait le même code que celui appelé par le back-office
+/// d'initialisation, et de fait le même code que celui appelé par l'administration technique
 /// (cf. <see cref="AdminEndpoints"/>).
 ///
 /// Le code de sortie est ce que Docker observe : 0 = succès (le conteneur est « completed »),
@@ -36,7 +37,12 @@ public static class AdminCommands
                     logger.LogInformation("Import du contenu depuis {Path}…", Path.GetFullPath(path));
 
                     var file = await ContentFile.LoadAsync(path);
-                    var report = await ContentImporter.ImportAsync(db, file, prune: args.Contains("--prune"));
+                    var report = await ContentImporter.ImportAsync(
+                        db,
+                        file,
+                        scope.ServiceProvider.GetRequiredService<ImageStore>(),
+                        ContentFile.ImagesDirectoryFrom(config),
+                        prune: args.Contains("--prune"));
 
                     logger.LogInformation("Import terminé : {Summary}", report.Summary);
                     if (report.OrphanSlugs.Count > 0)

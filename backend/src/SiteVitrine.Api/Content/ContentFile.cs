@@ -1,3 +1,4 @@
+using SiteVitrine.Api.Resources;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -7,8 +8,9 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace SiteVitrine.Api.Content;
 
 /// <summary>
-/// Reflet C# du fichier <c>content/resources.yaml</c>. C'est le contrat entre le fichier éditable
-/// à la main et l'application : ajouter un champ ici, c'est ajouter une clé reconnue dans le YAML.
+/// Reflet C# du fichier <c>content/resources.yaml</c>. C'est le contrat entre le fichier et
+/// l'application : ajouter un champ à <see cref="ResourceContent"/>, c'est ajouter une clé reconnue
+/// dans le YAML.
 ///
 /// Volontairement distinct de l'entité <c>Resource</c> : le fichier ne connaît ni <c>Id</c>
 /// (technique) ni <c>SortOrder</c> (déduit de l'ordre des entrées, cf. <see cref="ContentImporter"/>).
@@ -17,13 +19,13 @@ public sealed class ContentFile
 {
     public List<ResourceContent> Resources { get; set; } = [];
 
-    // YamlDotNet instancie les objets par réflexion : pas de `required` sur les propriétés ci-dessous,
-    // ce modificateur ferait échouer la construction. La validation se fait à l'import, où l'on peut
-    // produire un message parlant (« ligne X : slug manquant ») plutôt qu'une exception opaque.
+    // YamlDotNet instancie les objets par réflexion : pas de `required` sur les propriétés de
+    // ResourceContent, ce modificateur ferait échouer la construction. La validation se fait à
+    // l'import, où l'on peut produire un message parlant plutôt qu'une exception opaque.
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
-        // Le YAML s'écrit en camelCase (imageUrl, siteUrl) et se mappe sur les propriétés PascalCase.
+        // Le YAML s'écrit en camelCase (imageFile, siteUrl) et se mappe sur les propriétés PascalCase.
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
-        // Une clé inconnue est une faute de frappe, pas une extension silencieuse : on veut l'erreur.
+        // Une clé en double est une faute de frappe, pas une extension silencieuse : on veut l'erreur.
         .WithDuplicateKeyChecking()
         .Build();
 
@@ -64,6 +66,13 @@ public sealed class ContentFile
         config["Content:Path"] ?? throw new InvalidOperationException(
             "Content:Path absent de la configuration (cf. appsettings.json).");
 
+    /// <summary>
+    /// Dossier <c>images/</c> à côté du fichier : c'est là que l'import va chercher les images qu'une
+    /// base neuve ne possède pas encore.
+    /// </summary>
+    public static string ImagesDirectoryFrom(IConfiguration config) =>
+        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(PathFrom(config)))!, "images");
+
     public static async Task<ContentFile> LoadAsync(string path, CancellationToken ct = default)
     {
         if (!File.Exists(path))
@@ -79,17 +88,4 @@ public sealed class ContentFile
     }
 
     public string ToYaml() => Serializer.Serialize(this);
-}
-
-/// <summary>Une entrée du fichier de contenu.</summary>
-public sealed class ResourceContent
-{
-    public string Slug { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string? ImageUrl { get; set; }
-    public string? SiteUrl { get; set; }
-    public string Avis { get; set; } = string.Empty;
-    public List<string> Positifs { get; set; } = [];
-    public List<string> Negatifs { get; set; } = [];
-    public decimal Note { get; set; }
 }

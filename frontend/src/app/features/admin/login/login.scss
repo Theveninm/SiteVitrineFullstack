@@ -1,0 +1,9 @@
+@use '../admin-form';
+
+.login {
+  max-width: 420px;
+
+  .admin-form__error {
+    margin-bottom: 1rem;
+  }
+}

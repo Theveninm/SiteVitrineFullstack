@@ -1,6 +1,7 @@
 # Backend — API du site vitrine
 
-API REST qui sert le contenu du site (aujourd'hui les ressources de la page « Livres & outils »).
+API REST qui sert le contenu du site (aujourd'hui les ressources de la page « Livres & outils »), et
+les écritures du back-office qui permet de l'éditer.
 
 - **ASP.NET Core 10**, Minimal APIs
 - **EF Core 10** + **PostgreSQL 18** (provider Npgsql)
@@ -17,7 +18,7 @@ C'est le principe d'organisation du backend, et ce qui explique le découpage de
 | | Quoi | Où ça vit | Quand ça bouge |
 | --- | --- | --- | --- |
 | **Schéma** | tables, index, contraintes | `Data/Migrations/` (généré) | conteneur `api-init`, à chaque déploiement |
-| **Contenu** | les avis, les notes, les liens | [`../content/resources.yaml`](../content/resources.yaml) | quand tu le décides — jamais automatiquement |
+| **Contenu** | les avis, les notes, les liens, les images | la base, éditée dans le back-office ; images dans `Storage:Path` ; copie dans [`../content/`](../content/) | à chaque enregistrement dans le back-office |
 | **Code** | endpoints, import, validation | le reste | à la compilation |
 
 Le contenu n'est **pas** dans le code : corriger une faute dans un avis n'exige ni recompilation,
@@ -38,18 +39,25 @@ backend/
     ├── Content/
     │   ├── ContentFile.cs         Lecture/écriture de resources.yaml
     │   └── ContentImporter.cs     Import idempotent (par slug), export, validation
-    ├── Admin/
+    ├── Admin/                 Administration technique (port 8081)
     │   ├── AdminCommands.cs       Les actions en ligne de commande
     │   └── AdminEndpoints.cs      Les mêmes en HTTP + isolation par port
+    ├── Auth/                  Connexion au back-office
+    │   └── AuthEndpoints.cs       Connexion Google, comptes autorisés, cookie de session
+    ├── Images/
+    │   ├── ImageStore.cs          Dossier d'images : dépôt, lecture, ménage automatique
+    │   └── ImagesEndpoints.cs     Service des images, dépôt (authentifié)
     └── Resources/             Une feature = un dossier autonome
         ├── Resource.cs            Entité + configuration EF
-        └── ResourcesEndpoints.cs  Routes publiques (lecture seule)
+        ├── ResourceContent.cs     Champs éditables : validation et recopie (YAML et back-office)
+        └── ResourcesEndpoints.cs  Lecture publique, écritures authentifiées
 ```
 
 **Ajouter une feature** (authentification, messages, réservations…) :
 
 1. créer `MaFeature/` avec son entité (+ `IEntityTypeConfiguration<T>`, découverte automatiquement)
-   et ses endpoints groupés dans une méthode `MapMaFeatureEndpoints()` ;
+   et ses endpoints groupés dans une méthode `MapMaFeatureEndpoints()` — écritures derrière
+   `RequireAuthorization()` ;
 2. ajouter le `DbSet<T>` dans `AppDbContext` ;
 3. ajouter `app.MapMaFeatureEndpoints();` dans `Program.cs` ;
 4. générer la migration (voir plus bas).
@@ -61,42 +69,87 @@ Rien d'autre à toucher : c'est le but de ce découpage par feature, calqué sur
 
 ## Les deux surfaces
 
-L'API écoute sur **deux ports**, et c'est ce qui remplace l'authentification du back-office :
+L'API écoute sur **deux ports** :
 
-| Port | Surface | Qui y accède |
-| --- | --- | --- |
-| `8080` | site public, **lecture seule** | le conteneur `web` (Nginx), par le réseau interne |
-| `8081` | back-office, écritures | toi, par tunnel SSH — publié sur `127.0.0.1` seulement |
+| Port | Surface | Qui y accède | Protection des écritures |
+| --- | --- | --- | --- |
+| `8080` | site public (lecture) **et** back-office (écritures) | le conteneur `web` (Nginx), par le réseau interne | session du back-office |
+| `8081` | administration technique : Scalar, état, import, export | toi, par tunnel SSH — publié sur `127.0.0.1` seulement | isolation réseau |
 
 Le middleware `UseAdminPortIsolation` (dans `Admin/AdminEndpoints.cs`) renvoie **404** pour
 `/admin`, `/openapi` et `/scalar` dès que la connexion n'arrive pas sur le port d'administration.
 Il compare le port TCP réel de la connexion, pas l'en-tête `Host` : un en-tête se falsifie, un port
 d'arrivée non.
 
-> **Ce choix a une limite à connaître.** Il n'y a aucun compte, aucun mot de passe : la sécurité
-> repose entièrement sur le fait que `8081` n'est joignable que depuis la machine hôte. Le jour où
-> le back-office devra être accessible depuis internet, le filtre de port ne suffira plus et il
-> faudra ajouter une authentification.
+### Authentification du back-office
 
-### Endpoints publics (port 8080)
+Connexion avec un **compte Google** (OAuth 2.0, paquet `Microsoft.AspNetCore.Authentication.Google`) :
+le site ne stocke aucun mot de passe et ne voit jamais celui du compte.
 
-| Méthode | Route | Réponse |
-| ------- | ----- | ------- |
-| `GET` | `/api/resources` | Toutes les ressources, dans l'ordre du site |
-| `GET` | `/api/resources/{slug}` | Une ressource, ou `404` |
-| `GET` | `/health` | `Healthy` si la base répond |
+1. le bouton de la page de connexion mène à `GET /api/auth/login`, qui redirige vers Google ;
+2. l'utilisateur s'y connecte ;
+3. Google le renvoie sur `/api/auth/signin-google` avec un code, que l'API échange contre l'identité
+   du compte, de serveur à serveur, grâce au secret client ;
+4. si l'adresse est **vérifiée** par Google et figure dans `Auth:AllowedEmails`, l'API émet son propre
+   cookie de session et renvoie sur `/admin`. Sinon, retour sur `/admin/connexion?erreur=refus`, sans
+   session.
+
+Google prouve l'identité ; la décision d'autoriser reste dans l'API.
+
+- **Session par cookie** `HttpOnly` (hors de portée du JavaScript), `Secure`, `SameSite=Lax`, limité à
+  `/api`, valable 8 h glissantes. `Lax` plutôt que `Strict` pour ne pas gêner le retour depuis Google,
+  qui est une navigation venue d'un autre site. Les écritures restent protégées du CSRF : un cookie
+  `Lax` n'accompagne pas un `POST`/`PUT`/`DELETE` initié par un autre site — d'où le
+  `DisableAntiforgery()` du dépôt d'image.
+- **Écritures** : `RequireAuthorization()` sur les routes concernées ; sans session, `401`.
+- **Clés de chiffrement** du cookie (Data Protection) rangées dans `Storage:Path/keys` : un
+  redéploiement ne déconnecte pas. Au démarrage, ASP.NET avertit qu'elles sont stockées non
+  chiffrées — attendu, le volume n'est lisible que depuis l'hôte.
+- **Adresse de retour** : construite à partir du schéma et de l'hôte de la requête. Derrière NPM et
+  Nginx, l'API doit recevoir `X-Forwarded-Proto: https`, sinon Google la refuse
+  (`redirect_uri_mismatch`).
+
+Configuration : `Auth:Google:ClientId`, `Auth:Google:ClientSecret` et `Auth:AllowedEmails` (adresses
+séparées par des virgules). Tant que l'une est vide, le handler Google n'est pas enregistré : le site
+public fonctionne normalement, et la connexion renvoie sur `/admin/connexion?erreur=non-configure`.
+
+> L'administration technique, elle, n'a **aucune** authentification : sa sécurité repose entièrement
+> sur le fait que `8081` n'est joignable que depuis la machine hôte. Elle agit sur la base entière (un
+> import écrase les modifications du back-office) : la garder hors d'internet.
+
+### Endpoints du port 8080
+
+| Méthode | Route | Session | Réponse |
+| ------- | ----- | :-----: | ------- |
+| `GET` | `/api/resources` | | Toutes les ressources, dans l'ordre du site |
+| `GET` | `/api/resources/{slug}` | | Une ressource, ou `404` |
+| `POST` | `/api/resources` | ✔ | Crée une ressource en fin de liste |
+| `PUT` | `/api/resources/{slug}` | ✔ | Modifie une ressource (slug compris) |
+| `DELETE` | `/api/resources/{slug}` | ✔ | Supprime une ressource |
+| `POST` | `/api/resources/reorder` | ✔ | Nouvel ordre, à partir de la liste complète des slugs |
+| `GET` | `/api/images/{fichier}` | | Une image du contenu |
+| `POST` | `/api/images` | ✔ | Dépôt d'image (multipart, champ `file`, 5 Mo max) → `{ fileName }` |
+| `GET` | `/api/auth/login` | | Redirection vers Google (navigation pleine page) |
+| `GET` | `/api/auth/signin-google` | | Retour de Google, traité par le handler : cookie de session puis `/admin` |
+| `POST` | `/api/auth/logout` | | Ferme la session |
+| `GET` | `/api/auth/me` | ✔ | `204` si la session est ouverte |
+| `GET` | `/health` | | `Healthy` si la base répond |
+
+Une écriture invalide répond `400` au format `ValidationProblem`, avec un message par champ
+(`{ "errors": { "slug": ["Déjà utilisé…"] } }`) que le formulaire Angular affiche sous le champ
+concerné.
 
 Il n'y a **pas de configuration CORS** : le navigateur n'appelle jamais cette API depuis une autre
 origine (le Nginx du frontend relaie `/api` en production, `ng serve` en développement). Elle
 serait à rétablir si l'API devait un jour vivre sur un domaine distinct.
 
-### Back-office (port 8081)
+### Administration technique (port 8081)
 
 | Méthode | Route | Rôle |
 | ------- | ----- | ---- |
 | `GET` | `/scalar` | **L'interface** : tous les endpoints avec formulaires |
-| `GET` | `/admin/status` | Migrations appliquées/en attente, nb de ressources, état du fichier |
-| `POST` | `/admin/content/import` | Charge `resources.yaml` en base (`?prune=true` pour élaguer) |
+| `GET` | `/admin/status` | Migrations, nombre de ressources et d'images, fichier de contenu, connexion Google configurée |
+| `POST` | `/admin/content/import` | Charge `resources.yaml` et ses images en base (`?prune=true` pour élaguer) |
 | `GET` | `/admin/content/export` | Renvoie la base au format du fichier |
 
 Ouvrir le tunnel, puis `http://localhost:8081/scalar` :
@@ -109,28 +162,56 @@ ssh -L 8081:127.0.0.1:8081 utilisateur@serveur
 
 ## Modifier le contenu
 
-[`content/resources.yaml`](../content/resources.yaml) est la source de vérité. L'ordre des entrées
-définit l'ordre d'affichage ; la clé `slug` est l'identifiant stable sur lequel se fait
-l'appariement (la renommer crée une nouvelle ressource au lieu de mettre à jour l'existante).
+**La base fait foi**, et le back-office (page `/admin` du site) est le chemin normal : formulaire,
+glisser-déposer des images et de l'ordre d'affichage. Rien à recompiler ni à redéployer.
 
-1. éditer le fichier — il est monté dans le conteneur, pas besoin de reconstruire l'image ;
-2. déclencher l'import : bouton `POST /admin/content/import` dans Scalar, ou en ligne de commande
+### Cycle de vie des images
+
+Toutes les images du contenu vivent dans un seul dossier, `Storage:Path/images` (le volume `storage`
+en conteneur), servi sur `/api/images/{fichier}`. En base, une ressource ne stocke que le **nom** du
+fichier (`imageFile`).
+
+1. **Dépôt** — l'image glissée dans le formulaire part aussitôt vers `POST /api/images`. Elle est
+   renommée d'après l'empreinte SHA-256 de son contenu : aucun nom venu du client sur le disque, pas
+   de doublon, et un nom qui ne change jamais de contenu (d'où un cache navigateur d'un an).
+2. **Enregistrement** — le formulaire envoie ce nom avec le reste ; l'API vérifie que le fichier existe.
+3. **Ménage** — après chaque modification, suppression ou import, `ImageStore.DeleteUnusedAsync`
+   supprime les images que plus aucune ressource n'utilise :
+   - l'image **libérée** par l'écriture (ancienne image d'une ressource modifiée ou supprimée) part
+     immédiatement ;
+   - une image déposée mais **jamais enregistrée** (formulaire abandonné) est gardée une heure — le
+     formulaire est peut-être encore ouvert — puis supprimée au ménage suivant.
+
+Les images sont servies avec `Content-Security-Policy: sandbox` et `nosniff` : un SVG ouvert
+directement ne peut pas exécuter de script sur l'origine du site.
+
+### Le fichier de contenu : charger une base neuve, garder une copie
+
+[`content/resources.yaml`](../content/resources.yaml) et [`content/images/`](../content/images/)
+sont une **copie** du contenu : ils servent à charger une base neuve et à versionner le contenu dans
+git. L'ordre des entrées définit l'ordre d'affichage ; la clé `slug` est l'identifiant sur lequel se
+fait l'appariement.
 
 ```bash
 docker compose run --rm api import
 ```
 
-L'import est **idempotent** et **non destructif** : il crée les nouvelles, met à jour les
-existantes, et se contente de *signaler* celles qui sont en base mais plus dans le fichier. Pour
-les supprimer réellement, il faut le demander : `--prune` en CLI, `?prune=true` en HTTP.
+L'import est **idempotent** et **non destructif** : il crée les nouvelles ressources, met à jour les
+existantes, copie les images absentes du dossier de l'API, et se contente de *signaler* les
+ressources en base mais plus dans le fichier. Pour les supprimer réellement : `--prune` en CLI,
+`?prune=true` en HTTP.
 
-Le fichier est validé avant toute écriture en base (slug manquant ou en double, titre ou avis vide,
-note hors de [0,5]) — une erreur produit un message qui nomme l'entrée fautive et rien n'est écrit.
+> ⚠️ « Met à jour les existantes » veut dire : **écrase** ce qui a été modifié dans le back-office
+> depuis. Une fois le back-office en service, exporter avant d'importer quoi que ce soit.
+
+Le fichier est validé avant toute écriture en base (slug manquant, mal formé ou en double, titre ou
+avis vide, note hors de [0,5], image introuvable) — une erreur produit un message qui nomme l'entrée
+fautive et rien n'est écrit. Ces règles sont les mêmes que celles du back-office : elles vivent dans
+`Resources/ResourceContent.cs`.
 
 ### Le chemin de retour
 
-Si tu édites directement en base (LinqPad, ou un futur back-office d'édition), l'export récupère le
-tout au format du fichier :
+L'export écrit la base au format du fichier :
 
 ```bash
 docker compose run --rm api export > content/resources.yaml
@@ -138,6 +219,8 @@ docker compose run --rm api export > content/resources.yaml
 
 Les diagnostics partent sur `stderr` et les données sur `stdout` : la redirection ne récupère que
 du YAML. L'aller-retour est sans perte, y compris la mise en forme en blocs `|-` des longs avis.
+Les images déposées depuis le back-office ne font pas partie de l'export : les recopier depuis le
+volume (cf. [sauvegarde](../README.md#sauvegarde-et-restauration)) dans `content/images/`.
 
 ---
 
@@ -153,7 +236,7 @@ Pour joindre ce port depuis l'IDE, ajouter `ports: ['5432:5432']` au service `db
 connexion de développement est dans `appsettings.Development.json`, qui pointe aussi
 `Content:Path` vers `content/resources.yaml` à la racine du dépôt.
 
-Les trois commandes, hors conteneur :
+Les commandes, hors conteneur :
 
 ```bash
 dotnet run --project src/SiteVitrine.Api -- migrate
@@ -167,7 +250,29 @@ dotnet run --project src/SiteVitrine.Api -- import
 dotnet run --project src/SiteVitrine.Api -- export
 ```
 
-Sans argument, l'application démarre en serveur. `dotnet run` ajoutant ses propres messages sur la
+Sans argument, l'application démarre en serveur. Images et clés de session sont écrites dans
+`src/SiteVitrine.Api/storage/`, ignoré par git.
+
+### Se connecter au back-office en local
+
+Il faut un client OAuth Google (cf. [README racine](../README.md#identifiants-google-back-office))
+dont les adresses de retour incluent `http://localhost:4200/api/auth/signin-google`. Ses identifiants
+se rangent dans les **user secrets** de .NET : stockés dans le profil Windows, hors du dépôt, et lus
+seulement en environnement Development.
+
+```bash
+dotnet user-secrets set "Auth:Google:ClientId" "<client id>" --project src/SiteVitrine.Api
+```
+
+```bash
+dotnet user-secrets set "Auth:Google:ClientSecret" "<client secret>" --project src/SiteVitrine.Api
+```
+
+```bash
+dotnet user-secrets set "Auth:AllowedEmails" "<ton adresse gmail>" --project src/SiteVitrine.Api
+```
+
+Puis lancer l'API, `ng serve` dans `frontend/`, et ouvrir `http://localhost:4200/admin`. `dotnet run` ajoutant ses propres messages sur la
 sortie standard, utiliser `--no-launch-profile` si la sortie de `export` doit être redirigée.
 
 ### Générer une migration après modification d'une entité
@@ -191,4 +296,5 @@ déploiement. En local, `dotnet run -- migrate` fait la même chose.
 - **Le seul DTO du projet a été supprimé.** `Resource` est sérialisée telle quelle, ses deux champs
   techniques masqués par `[JsonIgnore]`. Le jour où une colonne devra rester privée (notes de
   travail, statut de publication…), c'est le signal qu'il faut réintroduire un DTO plutôt
-  qu'empiler les attributs.
+  qu'empiler les attributs. En écriture, c'est `ResourceContent` — la forme d'une entrée du YAML — qui
+  sert de corps de requête : validation et recopie vers l'entité n'existent qu'en un exemplaire.

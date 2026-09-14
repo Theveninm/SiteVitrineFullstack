@@ -3,5 +3,8 @@ obj/
 .vs/
 *.user
 
+# Données écrites par l'API en développement (images déposées, clés de session) : cf. Storage:Path.
+/src/SiteVitrine.Api/storage/
+
 # Secrets : jamais versionnés (cf. .env.example pour la liste des variables attendues).
 .env

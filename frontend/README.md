@@ -30,6 +30,32 @@ origine, donc aucun CORS à gérer.
 
 Voir [`../README.md`](../README.md) pour le déploiement.
 
+### Back-office
+
+`/admin` (aucun lien du site n'y mène) : connexion avec un compte Google autorisé, liste des
+ressources réordonnable par glisser-déposer, formulaire d'édition avec dépôt d'image. Pour s'y
+connecter en local, voir [`../backend/README.md`](../backend/README.md#se-connecter-au-back-office-en-local).
+
+```
+src/app/features/admin/
+├── admin.routes.ts             Routes chargées à la demande sous /admin, garde de session
+├── auth.service.ts             Session : vérification, déconnexion
+├── auth.guard.ts               Redirige vers /admin/connexion sans session
+├── unauthorized.interceptor.ts Session expirée (401) → page de connexion
+├── resource-admin.service.ts   Écritures : création, modification, suppression, ordre, image
+├── problem.ts                  Lecture des erreurs de validation de l'API
+├── _admin-form.scss            Styles communs, inclus par @use
+├── login/                      Page de connexion (bouton Google, messages de refus)
+├── resource-list/              Liste + glisser-déposer (@angular/cdk/drag-drop)
+├── resource-form/              Formulaire d'édition (Signal Forms)
+├── image-drop/                 Zone de dépôt d'image, contrôle de formulaire maison
+└── field-error/                Message d'erreur d'un champ
+```
+
+Les formulaires utilisent **Signal Forms** (`@angular/forms/signals`, stable depuis Angular 22). Les
+erreurs de validation renvoyées par l'API sont rattachées au champ concerné et s'affichent comme les
+erreurs locales.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:

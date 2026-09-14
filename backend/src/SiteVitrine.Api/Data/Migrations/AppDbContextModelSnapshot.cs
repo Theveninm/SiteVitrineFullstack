@@ -22,7 +22,7 @@ namespace SiteVitrine.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("SiteVitrine.Api.Features.Resources.Resource", b =>
+            modelBuilder.Entity("SiteVitrine.Api.Resources.Resource", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -34,7 +34,7 @@ namespace SiteVitrine.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ImageFile")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 

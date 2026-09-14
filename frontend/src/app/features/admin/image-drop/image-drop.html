@@ -1,0 +1,33 @@
+<!-- Les trois événements natifs du glisser-déposer de fichiers : dragover (survol, à annuler pour
+     autoriser le dépôt), dragleave (sortie), drop (fichier lâché). -->
+<div
+  class="image-drop"
+  [class.image-drop--over]="dragOver()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="dragOver.set(false)"
+  (drop)="onDrop($event)"
+>
+  @if (value()) {
+    <img class="image-drop__preview" [src]="imageSrc(value())" alt="Aperçu de l’image" />
+  }
+
+  @if (uploading()) {
+    <p class="image-drop__hint">Envoi en cours…</p>
+  } @else {
+    <p class="image-drop__hint">
+      Glisser une image ici, ou
+      <label class="image-drop__browse">
+        parcourir
+        <input type="file" accept="image/*" hidden (change)="onFileChosen($event)" />
+      </label>
+    </p>
+  }
+
+  @if (value()) {
+    <button type="button" class="image-drop__clear" (click)="clear()">Retirer l’image</button>
+  }
+
+  @if (error()) {
+    <p class="image-drop__error" role="alert">{{ error() }}</p>
+  }
+</div>

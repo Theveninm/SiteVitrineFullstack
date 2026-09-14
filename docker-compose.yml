@@ -83,10 +83,21 @@ services:
       # `Host=db` est le nom du service ci-dessus : le DNS interne de Docker le résout.
       ConnectionStrings__Default: >-
         Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Connexion au back-office avec Google (cf. README, « Identifiants Google »). Tant que l'une de
+      # ces trois valeurs est vide, la page /admin refuse toute connexion — le site public fonctionne.
+      Auth__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Auth__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      # Comptes Google autorisés, séparés par des virgules.
+      Auth__AllowedEmails: ${ADMIN_EMAILS:-}
     volumes:
-      # Le contenu éditorial, hors de l'image : corriger un avis = éditer ce fichier et relancer un
-      # import, sans reconstruire quoi que ce soit. Monté en lecture seule — l'API n'écrit jamais
-      # dedans, l'export passe par la sortie standard ou par le back-office.
+      # Les données que l'API écrit elle-même : images déposées dans le back-office et clés de session
+      # (sans elles, chaque redéploiement déconnecterait le back-office). Volume nommé, géré par Docker
+      # comme pgdata — et comme lui, à sauvegarder (cf. README).
+      - storage:/app/storage
+      # Le fichier de contenu et ses images (content/resources.yaml + content/images/), lus par
+      # l'import : chargement d'une base neuve, ou restauration. L'édition courante se fait dans le
+      # back-office, la base fait foi. Monté en lecture seule — l'API n'écrit jamais dedans, l'export
+      # passe par la sortie standard ou par l'administration technique.
       #
       # CONTENT_DIR vaut ./content en local, mais DOIT être un chemin absolu de l'hôte sous
       # Portainer : Portainer clone le dépôt à l'intérieur de son propre conteneur (/data/compose/N),
@@ -94,13 +105,16 @@ services:
       # dossier vide créé à la volée, et l'import échouerait faute de fichier.
       - ${CONTENT_DIR:-./content}:/app/content:ro
     ports:
-      # Back-office, publié UNIQUEMENT sur la boucle locale du serveur : injoignable depuis le
+      # Administration technique (Scalar, import/export), publiée UNIQUEMENT sur la boucle locale du serveur : injoignable depuis le
       # réseau, y compris depuis Nginx Proxy Manager. L'accès se fait par tunnel SSH (ou par la
       # redirection de ports de VS Code Remote-SSH), puis http://localhost:<ADMIN_PORT>/scalar.
       # Le port public 8080 n'est pas publié : seul le conteneur `web` y accède, par le réseau interne.
       #
+      # Le back-office d'édition, lui, n'a pas besoin de ce port : c'est la page /admin du site,
+      # protégée par mot de passe.
+      #
       # ADMIN_PORT ne change que le port côté hôte (utile si 8081 y est déjà pris par une autre
-      # stack) ; dans le conteneur, le back-office reste sur 8081.
+      # stack) ; dans le conteneur, l'administration reste sur 8081.
       - '127.0.0.1:${ADMIN_PORT:-8081}:8081'
     networks:
       - internal
@@ -142,10 +156,11 @@ services:
     # ne pas décommenter ici — passer par docker-compose.override.yml, que Compose charge
     # automatiquement en plus de ce fichier et qui reste propre à ta machine.
     #
-    # ⚠ Ne pas réutiliser 8081 : c'est le port du back-office de `api` (voir plus haut).
+    # ⚠ Ne pas réutiliser 8081 : c'est le port d'administration de `api` (voir plus haut).
 
 volumes:
   pgdata:
+  storage:
 
 networks:
   # Réseau privé de la stack, créé automatiquement.

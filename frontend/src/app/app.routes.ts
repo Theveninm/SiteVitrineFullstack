@@ -26,6 +26,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/contact/contact').then((m) => m.Contact),
   },
   {
+    // Back-office : aucun lien du site ne pointe ici. loadChildren charge d'un bloc les routes de
+    // l'administration et leur code, qu'un simple visiteur ne télécharge donc jamais.
+    path: 'admin',
+    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

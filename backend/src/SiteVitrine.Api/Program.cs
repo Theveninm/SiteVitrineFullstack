@@ -3,13 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Console;
 using Scalar.AspNetCore;
 using SiteVitrine.Api.Admin;
+using SiteVitrine.Api.Auth;
 using SiteVitrine.Api.Data;
+using SiteVitrine.Api.Images;
 using SiteVitrine.Api.Resources;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ce programme a deux modes :
 //   • sans argument  → serveur HTTP (le mode normal) ;
-//   • avec un verbe  → tâche d'administration one-shot, puis sortie (migrate, import, export).
+//   • avec un verbe  → tâche d'administration one-shot, puis sortie
+//                      (migrate, import, export).
 // Le second est ce qu'exécute le conteneur `api-init` du compose : même image, même configuration,
 // seule la commande change. C'est ce qui permet de migrer le schéma sans mêler cette opération au
 // démarrage de l'API — et de charger le contenu sans la mêler à la migration.
@@ -56,11 +59,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         npgsql.MigrationsHistoryTable("__EFMigrationsHistory");
     }));
 
+// Le dossier des données que l'API écrit elle-même : images déposées, clés de session. À ne pas
+// confondre avec content/, que l'API ne fait que lire. En conteneur, c'est le volume `storage`.
+// Surtout pas « data » : sous Windows, dont le système de fichiers ignore la casse, ce serait le
+// dossier de code Data/ (DbContext, migrations).
+var storagePath = builder.Configuration["Storage:Path"]
+    ?? throw new InvalidOperationException("Storage:Path absent de la configuration (cf. appsettings.json).");
+
+builder.Services.AddSingleton(new ImageStore(Path.Combine(storagePath, "images")));
+
+// Session du back-office : connexion avec Google, cookie de session, clés persistées.
+builder.Services.AddAdminAuthentication(builder.Configuration, storagePath);
+
 // Pas de configuration CORS : le navigateur n'appelle jamais cette API depuis une autre origine.
 // En production le Nginx du frontend relaie /api vers ce conteneur, en développement c'est le
 // proxy de `ng serve` — dans les deux cas la requête part vers l'origine de la page.
 
-// Document OpenAPI (JSON) décrivant l'API. Sert de source à l'interface du back-office (Scalar).
+// Document OpenAPI (JSON) décrivant l'API. Sert de source à l'interface d'administration (Scalar).
 builder.Services.AddOpenApi();
 
 // /health interroge réellement la base : c'est ce que sonde le healthcheck Docker, donc la stack
@@ -85,8 +100,8 @@ if (command is not null)
 // En premier : capture les exceptions levées plus bas dans le pipeline.
 app.UseExceptionHandler();
 
-// Juste après : le back-office n'existe que sur son port. Placée avant le routage, la règle
-// s'applique quoi qu'il arrive plus bas.
+// Juste après : l'administration technique n'existe que sur son port. Placée avant le routage, la
+// règle s'applique quoi qu'il arrive plus bas.
 var adminPort = builder.Configuration.GetValue("Admin:Port", 8081);
 app.UseAdminPortIsolation(adminPort);
 
@@ -126,6 +141,11 @@ forwardedHeadersOptions.KnownProxies.Clear();
 
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
+// Qui fait la requête (lecture du cookie), puis a-t-il le droit (RequireAuthorization des endpoints).
+// L'ordre est imposé : l'autorisation s'appuie sur l'identité établie par l'authentification.
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthChecks("/health");
 
 // Le document OpenAPI et son interface. Tous deux filtrés sur le port d'administration par
@@ -133,9 +153,10 @@ app.MapHealthChecks("/health");
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Site vitrine — administration"));
 
-// Une ligne par feature. C'est le seul point de Program.cs à toucher quand on en ajoute une
-// (authentification, messages, réservations…).
+// Une ligne par feature. C'est le seul point de Program.cs à toucher quand on en ajoute une.
 app.MapResourcesEndpoints();
+app.MapImagesEndpoints();
+app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 
 await app.RunAsync();

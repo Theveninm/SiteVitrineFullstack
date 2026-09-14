@@ -1,0 +1,12 @@
+<section class="admin-page login">
+  <h1>Back-office</h1>
+  <p>Réservé aux comptes Google autorisés.</p>
+
+  @if (error) {
+    <p class="admin-form__error" role="alert">{{ error }}</p>
+  }
+
+  <!-- Un lien ordinaire, pas un routerLink : la connexion quitte l'application Angular. L'API
+       redirige vers Google, qui ramène ensuite sur /admin une fois la session ouverte. -->
+  <a class="admin-button admin-button--primary" href="/api/auth/login">Se connecter avec Google</a>
+</section>
