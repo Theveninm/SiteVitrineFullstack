@@ -339,8 +339,10 @@ Les deux vont ensemble : la base référence les images par leur nom de fichier.
   `ADMIN_EMAILS` (adresse vérifiée par Google). Le site ne stocke aucun mot de passe ; la session est
   un cookie `HttpOnly`, `Secure`, `SameSite=Lax` (protection CSRF des écritures).
 - **Connexion Google derrière les proxys** : Google exige une adresse de retour en `https`, que l'API
-  construit à partir de l'en-tête `X-Forwarded-Proto`. Il doit donc arriver jusqu'à elle avec la
-  valeur `https` (NPM → Nginx → API). Symptôme sinon : `redirect_uri_mismatch` sur la page Google.
+  déduit de l'en-tête `X-Forwarded-Proto` posé par NPM. Nginx le relaie (`map` de
+  `frontend/nginx.conf`) et `UseForwardedHeaders` l'applique (`Program.cs`, deux proxys de
+  confiance). Ajouter ou retirer un maillon (un CDN devant NPM…) impose de revoir ces deux réglages ;
+  symptôme sinon : `redirect_uri_mismatch` sur la page Google.
 - **L'administration technique n'a pas d'authentification** : elle repose sur l'isolation du port
   `8081`. Cette garantie tombe dès qu'on publie ce port autrement que sur la boucle locale.
 - **Migrations dans un conteneur dédié**, pas au démarrage de l'API : un échec se voit comme un

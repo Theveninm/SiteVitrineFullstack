@@ -105,9 +105,10 @@ Google prouve l'identité ; la décision d'autoriser reste dans l'API.
 - **Clés de chiffrement** du cookie (Data Protection) rangées dans `Storage:Path/keys` : un
   redéploiement ne déconnecte pas. Au démarrage, ASP.NET avertit qu'elles sont stockées non
   chiffrées — attendu, le volume n'est lisible que depuis l'hôte.
-- **Adresse de retour** : construite à partir du schéma et de l'hôte de la requête. Derrière NPM et
-  Nginx, l'API doit recevoir `X-Forwarded-Proto: https`, sinon Google la refuse
-  (`redirect_uri_mismatch`).
+- **Adresse de retour** : construite à partir du schéma et de l'hôte de la requête, tels que les
+  rétablit `UseForwardedHeaders` (cf. `Program.cs`) : `https` grâce au `X-Forwarded-Proto` de NPM
+  relayé par Nginx, et l'hôte avec son port grâce au `Host $http_host` de `frontend/nginx.conf`. Si
+  l'un des deux se perd, Google refuse l'adresse (`redirect_uri_mismatch`).
 
 Configuration : `Auth:Google:ClientId`, `Auth:Google:ClientSecret` et `Auth:AllowedEmails` (adresses
 séparées par des virgules). Tant que l'une est vide, le handler Google n'est pas enregistré : le site

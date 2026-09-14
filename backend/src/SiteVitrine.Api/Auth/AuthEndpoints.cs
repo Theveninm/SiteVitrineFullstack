@@ -63,9 +63,11 @@ public static class AuthEndpoints
                 options.Cookie.Name = "sitevitrine_admin";
                 // Illisible depuis JavaScript : une faille XSS ne permettrait pas de voler la session.
                 options.Cookie.HttpOnly = true;
-                // Jamais envoyé en clair. « Always » plutôt que « SameAsRequest » : derrière NPM puis
-                // Nginx, l'API peut recevoir du HTTP même quand le visiteur est en HTTPS. Les navigateurs
-                // acceptent tout de même ce cookie sur http://localhost, le développement fonctionne.
+                // Jamais envoyé en clair. « Always » plutôt que « SameAsRequest » : UseForwardedHeaders
+                // (Program.cs) rétablit bien le schéma HTTPS du visiteur derrière NPM puis Nginx, mais le
+                // cookie ne doit pas perdre cette protection si un maillon venait à mal transmettre
+                // X-Forwarded-Proto. Les navigateurs acceptent tout de même ce cookie sur
+                // http://localhost, le développement fonctionne.
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 // Protection CSRF : un cookie Lax n'accompagne pas un POST/PUT/DELETE initié par un autre
                 // site, donc un formulaire piégé ailleurs ne peut rien écrire en notre nom. Lax et non
