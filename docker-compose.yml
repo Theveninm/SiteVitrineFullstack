@@ -1,6 +1,13 @@
 # Stack « site-vitrine » : le site complet — base de données, API, et frontend.
 # Déployée depuis Portainer. Voir README.md pour la marche à suivre.
 #
+# DEUX STACKS EN PARALLÈLE (production + préversion). Tout ce qui porte un nom global à l'hôte
+# Docker est préfixé par STACK_PREFIX : les conteneurs et les tags d'images. Sans ça, la seconde
+# stack entrerait en collision sur `sitevitrine-db` et réécrirait l'image de la première.
+# Le reste est déjà cloisonné par Compose, qui préfixe volumes et réseaux du nom de la stack —
+# une préversion a donc sa propre base et son propre volume d'images, sans rien partager.
+# Pensez aussi à donner un ADMIN_PORT libre à la seconde stack.
+#
 # Trois services, trois niveaux d'exposition :
 #   db   : joignable par l'API seule            (réseau internal)
 #   api  : joignable par le frontend seul       (réseau internal)
@@ -9,7 +16,7 @@
 services:
   db:
     image: postgres:18-alpine
-    container_name: sitevitrine-db
+    container_name: ${STACK_PREFIX:-sitevitrine}-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -47,8 +54,8 @@ services:
   api-init:
     build:
       context: ./backend
-    image: ${API_IMAGE:-sitevitrine-api:latest}
-    container_name: sitevitrine-api-init
+    image: ${API_IMAGE:-${STACK_PREFIX:-sitevitrine}-api:latest}
+    container_name: ${STACK_PREFIX:-sitevitrine}-api-init
     # Une tâche ponctuelle : ne pas relancer le conteneur quand il sort normalement.
     restart: 'no'
     command: ['migrate']
@@ -68,8 +75,8 @@ services:
     # blocs `build` et pointe `image` sur le registre.
     build:
       context: ./backend
-    image: ${API_IMAGE:-sitevitrine-api:latest}
-    container_name: sitevitrine-api
+    image: ${API_IMAGE:-${STACK_PREFIX:-sitevitrine}-api:latest}
+    container_name: ${STACK_PREFIX:-sitevitrine}-api
     restart: unless-stopped
     depends_on:
       # `service_completed_successfully` : on attend que la migration soit allée au bout (code 0).
@@ -131,8 +138,8 @@ services:
   web:
     build:
       context: ./frontend
-    image: ${WEB_IMAGE:-sitevitrine-web:latest}
-    container_name: sitevitrine-web
+    image: ${WEB_IMAGE:-${STACK_PREFIX:-sitevitrine}-web:latest}
+    container_name: ${STACK_PREFIX:-sitevitrine}-web
     restart: unless-stopped
     depends_on:
       api:
@@ -159,6 +166,8 @@ services:
     # ⚠ Ne pas réutiliser 8081 : c'est le port d'administration de `api` (voir plus haut).
 
 volumes:
+  # Compose préfixe ces noms par celui de la stack (`sitevitrine-beta_pgdata`…) : deux stacks ont
+  # donc chacune sa base et ses images, sans qu'il y ait rien à paramétrer ici.
   pgdata:
   storage:
 

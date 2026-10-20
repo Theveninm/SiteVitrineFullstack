@@ -148,6 +148,7 @@ Dans la section **Environment variables** de la stack, cliquer sur **Advanced mo
 
 | Variable | Valeur |
 | -------- | ------ |
+| `STACK_PREFIX` | **vide** pour la production (cf. [préversion](#préversion-une-seconde-stack-en-parallèle)) |
 | `POSTGRES_DB` | `sitevitrine` |
 | `POSTGRES_USER` | `sitevitrine` |
 | `POSTGRES_PASSWORD` | mot de passe long et aléatoire (généré par un gestionnaire de mots de passe) |
@@ -157,8 +158,8 @@ Dans la section **Environment variables** de la stack, cliquer sur **Advanced mo
 | `GOOGLE_CLIENT_ID` | identifiant du client OAuth Google (ci-dessous) |
 | `GOOGLE_CLIENT_SECRET` | secret de ce client (ci-dessous) |
 | `ADMIN_EMAILS` | ton adresse Gmail ; plusieurs adresses séparées par des virgules |
-| `API_IMAGE` | `sitevitrine-api:latest` |
-| `WEB_IMAGE` | `sitevitrine-web:latest` |
+| `API_IMAGE` | **vide** — le tag se déduit de `STACK_PREFIX` |
+| `WEB_IMAGE` | **vide** — idem |
 
 #### Identifiants Google (back-office)
 
@@ -247,13 +248,46 @@ image échoue avec une erreur `413`, c'est la taille maximale de requête de NPM
 `client_max_body_size 10m;` dans l'onglet **Advanced** du proxy host. Pour que NPM
 résolve `sitevitrine-web`, son conteneur doit partager le réseau `PROXY_NETWORK` (étape 1).
 
-**Remplacer un site déjà en ligne sans coupure** : publier d'abord sur un sous-domaine de test
-(enregistrement DNS `A` vers l'IP du serveur, chez le registrar), valider, puis **éditer** le proxy
-host existant du domaine principal pour lui donner `sitevitrine-web` / `80` comme cible. Supprimer
-ensuite le proxy host de test et l'ancienne stack.
-
 Vérification dans le navigateur : la page Ressources affiche les avis, et
 `https://<domaine>/api/resources` renvoie du JSON.
+
+### Préversion : une seconde stack en parallèle
+
+Pour éprouver une montée de version sans toucher au site en ligne, on fait tourner une **seconde
+stack complète** sur le même serveur, publiée sur un sous-domaine, avec sa propre base.
+
+Tout ce qui porte un nom global à l'hôte Docker est préfixé par `STACK_PREFIX` : les conteneurs et
+les tags d'images. Le reste est déjà cloisonné par Compose, qui préfixe volumes et réseaux du nom de
+la stack — la préversion a donc sa propre base et son propre volume d'images, sans rien partager
+avec la production.
+
+1. **DNS** : un enregistrement `A` (et `AAAA` si IPv6) du sous-domaine vers l'IP du serveur, chez le
+   registrar ;
+2. **Portainer → Stacks → Add stack**, nom `site-vitrine-beta`, même dépôt et même `docker-compose.yml`
+   qu'à l'[étape 3](#3-créer-la-stack) ;
+3. **Variables** : repartir de celles de la production, puis changer *seulement* celles-ci —
+
+   | Variable | Valeur pour la préversion |
+   | -------- | ------------------------- |
+   | `STACK_PREFIX` | `sitevitrine-beta` |
+   | `ADMIN_PORT` | un port libre, par exemple `8091` |
+   | `POSTGRES_PASSWORD` | un mot de passe distinct : c'est une autre base |
+   | `API_IMAGE`, `WEB_IMAGE` | laisser **vides** — sinon les deux stacks construiraient le même tag, et la préversion réécrirait l'image de la production |
+
+   `CONTENT_DIR` peut rester le même dossier : il est monté en lecture seule.
+4. **Déployer**, puis charger le contenu dans cette base neuve : `POST /admin/content/import` sur le
+   port d'administration de la préversion (son `ADMIN_PORT`, par tunnel SSH) ;
+5. **Publier le sous-domaine** dans NPM, exactement comme ci-dessus mais avec
+   `sitevitrine-beta-web` comme *Forward Hostname*.
+
+> ⚠️ Ajouter l'adresse de retour du sous-domaine (`https://<sous-domaine>/api/auth/signin-google`)
+> dans le client OAuth Google, sinon le back-office de la préversion répondra `redirect_uri_mismatch`.
+
+**Basculer la production** une fois la préversion validée : **Portainer → Stacks → site-vitrine →
+Pull and redeploy**. La production migre alors sa propre base et conserve son contenu — c'est plus
+sûr que de rediriger le domaine vers la stack de préversion, dont la base est un chargement du
+fichier et ignore ce qui a été édité en production depuis. Supprimer ensuite la stack de préversion
+et son proxy host ; ses volumes partent avec elle.
 
 ### 8. Utiliser le back-office
 
