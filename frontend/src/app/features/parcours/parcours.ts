@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-parcours',
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './parcours.html',
   styleUrl: './parcours.scss',
 })
