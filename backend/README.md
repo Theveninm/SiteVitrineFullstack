@@ -295,6 +295,40 @@ dotnet ef migrations add NomDeLaMigration --project src/SiteVitrine.Api --output
 Pas de `database update` à lancer : le conteneur `api-init` applique les migrations en attente au
 déploiement. En local, `dotnet run -- migrate` fait la même chose.
 
+> ⚠️ Recompiler avant de lancer `dotnet run -- migrate` qui suit. `migrations add` écrit la migration
+> et le snapshot du modèle sur le disque, mais un `--no-build` tournerait encore sur l'assembly
+> d'avant — EF refuse alors de migrer (`PendingModelChangesWarning`).
+
+---
+
+## Tests
+
+```bash
+dotnet test
+```
+
+**Docker doit tourner** : les tests qui touchent à la base démarrent un vrai PostgreSQL jetable
+(Testcontainers), dans la même image qu'en production. C'est voulu — les garanties qui comptent ici
+sont portées par la base : unicité du slug, contrainte de domaine sur la note, et surtout les
+tableaux natifs `text[]` sur lesquels Npgsql mappe les `List<string>`. Un fournisseur en mémoire
+n'en rejoue aucune, et laisserait donc passer précisément ce que ces tests cherchent.
+
+Le conteneur démarre une fois pour toute la collection `postgres` et les tables sont vidées entre
+deux tests ; la suite complète tient en quelques secondes.
+
+| Fichier | Ce qu'il couvre |
+| ------- | --------------- |
+| `Content/ContentRulesTests` | Format de slug et adresse web — sans base ni fichier |
+| `Resources/ResourceContentTests`, `Projects/ProjectContentTests` | Validation par champ et recopie vers l'entité : les mêmes règles servent au YAML et au back-office |
+| `Content/ContentFileTests` | Aller-retour par le fichier : blocs littéraux, clés nulles omises, clé en double refusée, `C#` non quoté |
+| `Images/ImageStoreTests` | Nommage par empreinte, dédoublonnage, noms de fichiers refusés (`../`, sous-dossier, format) |
+| `Images/ImageCleanupTests` | Le ménage : image libérée supprimée tout de suite, image déposée gardée une heure, image partagée conservée |
+| `Content/ContentImporterTests` | Idempotence, ordre d'affichage, orphelins signalés puis élagués, fichier invalide refusé **avant** toute écriture |
+
+Les endpoints HTTP ne sont pas couverts : leur logique se réduit à valider, appeler ces briques-là,
+et choisir un code de retour. Le jour où elle s'épaissit, c'est `WebApplicationFactory` qu'il faudra
+sortir.
+
 ---
 
 ## Points d'attention

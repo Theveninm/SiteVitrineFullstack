@@ -8,3 +8,6 @@
 .git/
 .gitignore
 README.md
+# L'image ne compile que src/SiteVitrine.Api : les tests n'ont rien à y faire, et les exclure évite
+# qu'un commit qui ne touche qu'eux invalide le cache de build.
+tests/
