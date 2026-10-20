@@ -1,0 +1,30 @@
+@use '../admin-form';
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+
+  &__tabs {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  &__tab {
+    padding-bottom: 0.2rem;
+    text-decoration: none;
+    opacity: 0.6;
+    border-bottom: 2px solid transparent;
+
+    &--active {
+      font-weight: 600;
+      opacity: 1;
+      border-bottom-color: #1a1a1a;
+    }
+  }
+}

@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { PROJECTS } from './project-data';
+import { Component, inject } from '@angular/core';
+
+import { ProjectService } from './project.service';
 
 @Component({
   selector: 'app-projects',
@@ -8,5 +9,7 @@ import { PROJECTS } from './project-data';
   styleUrl: './projects.scss',
 })
 export class Projects {
-  protected readonly projects = PROJECTS;
+  // La ressource HTTP vit dans le service (injecté en root) : les données sont donc conservées
+  // si l'utilisateur quitte la page puis y revient, au lieu d'être rechargées à chaque montage.
+  protected readonly projects = inject(ProjectService).projects;
 }

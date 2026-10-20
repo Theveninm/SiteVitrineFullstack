@@ -1,0 +1,24 @@
+// Messages d'état d'une liste chargée depuis l'API : chargement, erreur, section vide.
+// Partagé par les pages publiques qui lisent un httpResource (Ressources, Projets), sur le modèle
+// de _admin-form.scss pour le back-office : chaque page l'importe avec `@use '../content-status'`.
+// Les règles prennent alors la portée du composant qui les importe (encapsulation Angular).
+
+.content-status {
+  opacity: 0.7;
+
+  &--error {
+    opacity: 1;
+    color: #c62828;
+  }
+
+  &__retry {
+    margin-left: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid currentcolor;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+}

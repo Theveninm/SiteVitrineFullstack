@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SiteVitrine.Api.Content;
 
 namespace SiteVitrine.Api.Resources;
 
@@ -16,7 +17,7 @@ namespace SiteVitrine.Api.Resources;
 ///
 /// En écriture, c'est <see cref="ResourceContent"/> qui sert de corps de requête.
 /// </summary>
-public sealed class Resource
+public sealed class Resource : IOrderedContent
 {
     // Longueurs maximales, partagées par la configuration EF (taille des colonnes) et par la validation
     // (message clair avant d'atteindre la base).
@@ -68,7 +69,7 @@ public sealed class Resource
 
     /// <summary>
     /// Ordre d'affichage sur la page ; l'ordre d'insertion en base n'est pas garanti. Modifié par le
-    /// glisser-déposer du back-office, ou par le rang de l'entrée dans content/resources.yaml lors d'un
+    /// glisser-déposer du back-office, ou par le rang de l'entrée dans content/content.yaml lors d'un
     /// import. Inutile au frontend, qui reçoit déjà la liste triée — d'où le [JsonIgnore].
     /// </summary>
     [JsonIgnore]

@@ -1,5 +1,5 @@
 <section class="admin-page">
-  <a class="resource-form__back" routerLink="/admin">← Retour à la liste</a>
+  <a class="resource-form__back" routerLink="/admin/ressources">← Retour à la liste</a>
   <h1>{{ editedSlug ? 'Modifier la ressource' : 'Nouvelle ressource' }}</h1>
 
   <!-- Chaîne exclusive : value() d'un httpResource en erreur lève une exception (cf. page Ressources). -->
@@ -58,7 +58,12 @@
 
       <div class="admin-form__field">
         <label class="admin-form__label" for="avis">Avis</label>
-        <textarea id="avis" class="admin-form__input" rows="8" [formField]="resourceForm.avis"></textarea>
+        <textarea
+          id="avis"
+          class="admin-form__input"
+          rows="8"
+          [formField]="resourceForm.avis"
+        ></textarea>
         <app-field-error [field]="resourceForm.avis" />
       </div>
 
@@ -99,7 +104,7 @@
         >
           Enregistrer
         </button>
-        <a class="admin-button" routerLink="/admin">Annuler</a>
+        <a class="admin-button" routerLink="/admin/ressources">Annuler</a>
       </div>
     </form>
   }

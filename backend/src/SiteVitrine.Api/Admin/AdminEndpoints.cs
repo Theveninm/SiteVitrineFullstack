@@ -56,7 +56,7 @@ public static class AdminEndpoints
             .WithSummary("État du schéma, du contenu en base, des images et du fichier de contenu.");
 
         group.MapPost("/content/import", ImportContent)
-            .WithSummary("Charge content/resources.yaml en base (correspondance par slug).");
+            .WithSummary("Charge content/content.yaml en base (correspondance par slug).");
 
         group.MapGet("/content/export", ExportContent)
             .WithSummary("Renvoie le contenu de la base au format du fichier YAML.");
@@ -81,6 +81,7 @@ public static class AdminEndpoints
             Database = new
             {
                 ResourceCount = await db.Resources.CountAsync(ct),
+                ProjectCount = await db.Projects.CountAsync(ct),
             },
             Images = new
             {
@@ -120,7 +121,7 @@ public static class AdminEndpoints
     {
         var file = await ContentImporter.ExportAsync(db, ct);
 
-        // text/yaml plutôt que JSON : la réponse est destinée à être recollée dans content/resources.yaml.
+        // text/yaml plutôt que JSON : la réponse est destinée à être recollée dans content/content.yaml.
         return TypedResults.Text(file.ToYaml(), "text/yaml; charset=utf-8");
     }
 }

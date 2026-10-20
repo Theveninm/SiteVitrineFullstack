@@ -37,8 +37,11 @@ backend/
     │   ├── DatabaseMigrator.cs    Migrations — schéma uniquement
     │   └── Migrations/            Généré par `dotnet ef` — ne pas éditer à la main
     ├── Content/
-    │   ├── ContentFile.cs         Lecture/écriture de resources.yaml
-    │   └── ContentImporter.cs     Import idempotent (par slug), export, validation
+    │   ├── ContentFile.cs         Lecture/écriture de content.yaml
+    │   ├── ContentImporter.cs     Import idempotent (par slug), export, validation
+    │   ├── ContentOrdering.cs     Rang d'affichage et réordonnancement, communs aux features
+    │   ├── ContentRules.cs        Règles de validation communes (format de slug, URL web)
+    │   └── IContentFor.cs         Contrat d'un XxxContent vis-à-vis de son entité (import)
     ├── Admin/                 Administration technique (port 8081)
     │   ├── AdminCommands.cs       Les actions en ligne de commande
     │   └── AdminEndpoints.cs      Les mêmes en HTTP + isolation par port
@@ -47,10 +50,14 @@ backend/
     ├── Images/
     │   ├── ImageStore.cs          Dossier d'images : dépôt, lecture, ménage automatique
     │   └── ImagesEndpoints.cs     Service des images, dépôt (authentifié)
-    └── Resources/             Une feature = un dossier autonome
-        ├── Resource.cs            Entité + configuration EF
-        ├── ResourceContent.cs     Champs éditables : validation et recopie (YAML et back-office)
-        └── ResourcesEndpoints.cs  Lecture publique, écritures authentifiées
+    ├── Resources/             Une feature = un dossier autonome
+    │   ├── Resource.cs            Entité + configuration EF
+    │   ├── ResourceContent.cs     Champs éditables : validation et recopie (YAML et back-office)
+    │   └── ResourcesEndpoints.cs  Lecture publique, écritures authentifiées
+    └── Projects/              Même découpage, sans image
+        ├── Project.cs             Entité + configuration EF
+        ├── ProjectContent.cs      Champs éditables : validation et recopie
+        └── ProjectsEndpoints.cs   Lecture publique, écritures authentifiées
 ```
 
 **Ajouter une feature** (authentification, messages, réservations…) :
@@ -149,8 +156,8 @@ serait à rétablir si l'API devait un jour vivre sur un domaine distinct.
 | Méthode | Route | Rôle |
 | ------- | ----- | ---- |
 | `GET` | `/scalar` | **L'interface** : tous les endpoints avec formulaires |
-| `GET` | `/admin/status` | Migrations, nombre de ressources et d'images, fichier de contenu, connexion Google configurée |
-| `POST` | `/admin/content/import` | Charge `resources.yaml` et ses images en base (`?prune=true` pour élaguer) |
+| `GET` | `/admin/status` | Migrations, nombre de ressources, de projets et d'images, fichier de contenu, connexion Google configurée |
+| `POST` | `/admin/content/import` | Charge `content.yaml` et ses images en base (`?prune=true` pour élaguer) |
 | `GET` | `/admin/content/export` | Renvoie la base au format du fichier |
 
 Ouvrir le tunnel, puis `http://localhost:8081/scalar` :
@@ -188,34 +195,37 @@ directement ne peut pas exécuter de script sur l'origine du site.
 
 ### Le fichier de contenu : charger une base neuve, garder une copie
 
-[`content/resources.yaml`](../content/resources.yaml) et [`content/images/`](../content/images/)
+[`content/content.yaml`](../content/content.yaml) et [`content/images/`](../content/images/)
 sont une **copie** du contenu : ils servent à charger une base neuve et à versionner le contenu dans
-git. L'ordre des entrées définit l'ordre d'affichage ; la clé `slug` est l'identifiant sur lequel se
-fait l'appariement.
+git. Le fichier a une clé de premier niveau par type de contenu — `resources:` et `projects:` — et
+dans chacune, l'ordre des entrées définit l'ordre d'affichage ; la clé `slug` est l'identifiant sur
+lequel se fait l'appariement.
 
 ```bash
 docker compose run --rm api import
 ```
 
-L'import est **idempotent** et **non destructif** : il crée les nouvelles ressources, met à jour les
-existantes, copie les images absentes du dossier de l'API, et se contente de *signaler* les
-ressources en base mais plus dans le fichier. Pour les supprimer réellement : `--prune` en CLI,
-`?prune=true` en HTTP.
+L'import est **idempotent** et **non destructif** : il crée les nouvelles entrées, met à jour les
+existantes, copie les images absentes du dossier de l'API, et se contente de *signaler* celles qui
+sont en base mais plus dans le fichier. Il traite les deux sections en un seul enregistrement, et
+son rapport compte séparément les ressources et les projets. Pour supprimer réellement les
+orphelines : `--prune` en CLI, `?prune=true` en HTTP.
 
 > ⚠️ « Met à jour les existantes » veut dire : **écrase** ce qui a été modifié dans le back-office
 > depuis. Une fois le back-office en service, exporter avant d'importer quoi que ce soit.
 
-Le fichier est validé avant toute écriture en base (slug manquant, mal formé ou en double, titre ou
-avis vide, note hors de [0,5], image introuvable) — une erreur produit un message qui nomme l'entrée
-fautive et rien n'est écrit. Ces règles sont les mêmes que celles du back-office : elles vivent dans
-`Resources/ResourceContent.cs`.
+Le fichier est validé avant toute écriture en base (slug manquant, mal formé ou en double, titre,
+avis ou description vide, note hors de [0,5], image introuvable) — une erreur produit un message qui
+nomme la section et l'entrée fautives, et rien n'est écrit. Ces règles sont les mêmes que celles du
+back-office : elles vivent dans le `XxxContent.cs` de chaque feature, les plus générales (format de
+slug, adresse web) dans `Content/ContentRules.cs`.
 
 ### Le chemin de retour
 
 L'export écrit la base au format du fichier :
 
 ```bash
-docker compose run --rm api export > content/resources.yaml
+docker compose run --rm api export > content/content.yaml
 ```
 
 Les diagnostics partent sur `stderr` et les données sur `stdout` : la redirection ne récupère que
@@ -235,7 +245,7 @@ docker compose up -d db
 
 Pour joindre ce port depuis l'IDE, ajouter `ports: ['5432:5432']` au service `db`. La chaîne de
 connexion de développement est dans `appsettings.Development.json`, qui pointe aussi
-`Content:Path` vers `content/resources.yaml` à la racine du dépôt.
+`Content:Path` vers `content/content.yaml` à la racine du dépôt.
 
 Les commandes, hors conteneur :
 

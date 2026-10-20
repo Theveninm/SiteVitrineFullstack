@@ -1,18 +1,20 @@
-# Copie lisible du contenu de la page « Livres & outils ».
+# Copie lisible du contenu éditorial du site : les ressources de la page « Livres & outils »
+# et les projets de la page « Projets ».
 #
 # La BASE fait foi : le contenu s'édite dans le back-office (page /admin du site). Ce fichier sert à
 # charger une base neuve et à garder une trace versionnée du contenu. Pour le remettre à jour depuis
-# la base : `docker compose run --rm api export > content/resources.yaml` (cf. backend/README.md).
+# la base : `docker compose run --rm api export > content/content.yaml` (cf. backend/README.md).
 #
 # Il n'est JAMAIS importé automatiquement, et un import écrase les modifications faites depuis dans le
 # back-office.
 #
-# L'ORDRE DES ENTRÉES définit l'ordre d'affichage. La clé `slug` est l'identifiant stable : c'est sur
-# elle que l'import fait sa correspondance. `imageFile` désigne un fichier de content/images/, copié
-# dans le dossier d'images de l'API à l'import s'il n'y est pas déjà.
+# Une clé de premier niveau par type de contenu (`resources:`, `projects:`). Dans chacune, L'ORDRE DES
+# ENTRÉES définit l'ordre d'affichage, et la clé `slug` est l'identifiant stable : c'est sur elle que
+# l'import fait sa correspondance. `imageFile` désigne un fichier de content/images/, copié dans le
+# dossier d'images de l'API à l'import s'il n'y est pas déjà.
 #
-# `avis` utilise un bloc littéral `|-` : tout ce qui est indenté en dessous est pris tel quel,
-# sans échappement (guillemets, apostrophes, deux-points — tout passe).
+# Les longs textes (`avis`, `description`) utilisent un bloc littéral `|-` : tout ce qui est indenté
+# en dessous est pris tel quel, sans échappement (guillemets, apostrophes, deux-points — tout passe).
 
 resources:
   - slug: cs-players-guide
@@ -253,3 +255,28 @@ resources:
       - digressions sur les détails techniques, qui font que les points importants qui ne ressortent pas.
       - manque de clarté et de pédagogie
       - QCM plutot qu'exercices pratiques, tout aussi au fraises que le reste du livre
+
+projects:
+  - slug: docfileeditor
+    title: DocFileEditor
+    githubUrl: https://github.com/Theveninm/DocFileEditor
+    description: |-
+      Utilitaire de modding pour Might & Magic: Duel of Champions - Revival. Rétro-ingénierie d'un format d'archive propriétaire (FAT-like), avec lecture et écriture des entrées compressées (SharpZipLib) et un mécanisme de sauvegarde/restauration des fichiers originaux. Le projet est pour l'instant en suspens, d'une part parce que c'était aussi un projet « découverte », et d'autre part en raison de la partie rétro-ingénierie, sur laquelle je patauge un peu. Par ailleurs, si je le reprenais, il y a de fortes chances que je le refactorise en profondeur. Pour autant, il devrait vous donner un aperçu de mon niveau en C# / WPF.
+    techs:
+      - C#
+      - WPF
+      - ILSpy
+      - HxD
+  - slug: site-personnel
+    title: Site personnel
+    description: |-
+      Création de ce site vitrine, hébergé sur un VPS Ubuntu : un frontend Angular, une API ASP.NET Core et une base PostgreSQL, déployés comme une seule stack Docker. L'occasion de mettre à l'épreuve mes compétences en Angular et d'expérimenter le déploiement d'une application « depuis zéro », à partir d'un serveur Ubuntu vide.
+    techs:
+      - Angular
+      - TypeScript
+      - ASP.NET Core
+      - EF Core
+      - PostgreSQL
+      - Docker
+      - Nginx
+      - Ubuntu

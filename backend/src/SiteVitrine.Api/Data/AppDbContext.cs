@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SiteVitrine.Api.Projects;
 using SiteVitrine.Api.Resources;
 
 namespace SiteVitrine.Api.Data;
@@ -22,6 +23,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     /// lignes, et sa classe <c>IEntityTypeConfiguration&lt;T&gt;</c> dans son propre dossier.
     /// </summary>
     public DbSet<Resource> Resources => Set<Resource>();
+
+    /// <inheritdoc cref="Resources"/>
+    public DbSet<Project> Projects => Set<Project>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,3 +1,4 @@
+using SiteVitrine.Api.Projects;
 using SiteVitrine.Api.Resources;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -8,16 +9,19 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace SiteVitrine.Api.Content;
 
 /// <summary>
-/// Reflet C# du fichier <c>content/resources.yaml</c>. C'est le contrat entre le fichier et
-/// l'application : ajouter un champ à <see cref="ResourceContent"/>, c'est ajouter une clé reconnue
-/// dans le YAML.
+/// Reflet C# du fichier <c>content/content.yaml</c>. C'est le contrat entre le fichier et
+/// l'application : une clé de premier niveau par type de contenu, et sous chacune les champs de son
+/// <c>XxxContent</c> — ajouter un champ à <see cref="ResourceContent"/>, c'est ajouter une clé
+/// reconnue dans le YAML.
 ///
-/// Volontairement distinct de l'entité <c>Resource</c> : le fichier ne connaît ni <c>Id</c>
-/// (technique) ni <c>SortOrder</c> (déduit de l'ordre des entrées, cf. <see cref="ContentImporter"/>).
+/// Volontairement distinct des entités : le fichier ne connaît ni <c>Id</c> (technique) ni
+/// <c>SortOrder</c> (déduit de l'ordre des entrées, cf. <see cref="ContentImporter"/>).
 /// </summary>
 public sealed class ContentFile
 {
     public List<ResourceContent> Resources { get; set; } = [];
+
+    public List<ProjectContent> Projects { get; set; } = [];
 
     // YamlDotNet instancie les objets par réflexion : pas de `required` sur les propriétés de
     // ResourceContent, ce modificateur ferait échouer la construction. La validation se fait à

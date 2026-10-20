@@ -69,7 +69,7 @@ describe('Ressources', () => {
       .flush('boom', { status: 500, statusText: 'Internal Server Error' });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('.ressources__status--error')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.ressources__retry')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.content-status--error')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.content-status__retry')).toBeTruthy();
   });
 });

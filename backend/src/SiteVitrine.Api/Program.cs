@@ -6,6 +6,7 @@ using SiteVitrine.Api.Admin;
 using SiteVitrine.Api.Auth;
 using SiteVitrine.Api.Data;
 using SiteVitrine.Api.Images;
+using SiteVitrine.Api.Projects;
 using SiteVitrine.Api.Resources;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +156,7 @@ app.MapScalarApiReference(options => options.WithTitle("Site vitrine — adminis
 
 // Une ligne par feature. C'est le seul point de Program.cs à toucher quand on en ajoute une.
 app.MapResourcesEndpoints();
+app.MapProjectsEndpoints();
 app.MapImagesEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();

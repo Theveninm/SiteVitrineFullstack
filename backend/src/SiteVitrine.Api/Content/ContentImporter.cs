@@ -1,20 +1,38 @@
 using Microsoft.EntityFrameworkCore;
 using SiteVitrine.Api.Data;
 using SiteVitrine.Api.Images;
+using SiteVitrine.Api.Projects;
 using SiteVitrine.Api.Resources;
 
 namespace SiteVitrine.Api.Content;
 
-/// <summary>Bilan d'un import, renvoyé au back-office et journalisé par la commande CLI.</summary>
-public sealed record ImportReport(
+/// <summary>Bilan d'un import pour un type de contenu.</summary>
+/// <param name="OrphanSlugs">Présents en base, absents du fichier. Vide si <c>prune</c> les a supprimés.</param>
+public sealed record ImportCounts(
     int Created,
     int Updated,
     int Unchanged,
     int Removed,
     IReadOnlyList<string> OrphanSlugs)
 {
-    public string Summary => $"{Created} créée(s), {Updated} mise(s) à jour, {Unchanged} inchangée(s), "
-        + $"{Removed} supprimée(s), {OrphanSlugs.Count} orpheline(s) en base.";
+    public string Summary => $"{Created} créé(s), {Updated} mis à jour, {Unchanged} inchangé(s), "
+        + $"{Removed} supprimé(s), {OrphanSlugs.Count} orphelin(s) en base.";
+}
+
+/// <summary>Bilan d'un import, renvoyé au back-office et journalisé par la commande CLI.</summary>
+public sealed record ImportReport(ImportCounts Resources, ImportCounts Projects)
+{
+    public string Summary => $"ressources — {Resources.Summary} ; projets — {Projects.Summary}";
+
+    /// <summary>
+    /// Les orphelins des deux types, préfixés par leur section du fichier : le message
+    /// d'avertissement doit dire dans quelle liste du YAML l'entrée manque.
+    /// </summary>
+    public IReadOnlyList<string> OrphanSlugs =>
+    [
+        .. Resources.OrphanSlugs.Select(slug => $"resources/{slug}"),
+        .. Projects.OrphanSlugs.Select(slug => $"projects/{slug}"),
+    ];
 }
 
 /// <summary>
@@ -29,7 +47,7 @@ public static class ContentImporter
 {
     /// <param name="imagesSourceDirectory">Dossier où prendre les images absentes du dossier de l'API.</param>
     /// <param name="prune">
-    /// Supprime les ressources présentes en base mais absentes du fichier. Désactivé par défaut :
+    /// Supprime les entrées présentes en base mais absentes du fichier. Désactivé par défaut :
     /// sans ce drapeau, l'import ne détruit jamais rien, il se contente de signaler les orphelines.
     /// </param>
     public static async Task<ImportReport> ImportAsync(
@@ -46,31 +64,65 @@ public static class ContentImporter
             imagesSourceDirectory,
             file.Resources.Select(r => r.ImageFile).Where(name => !string.IsNullOrWhiteSpace(name))!);
 
+        // Relevé avant toute écriture : ce sont les images qu'un remplacement va libérer, et dont le
+        // ménage devra disposer une fois la base à jour.
+        var imagesBefore = await db.Resources.Select(r => r.ImageFile).ToListAsync(ct);
+
+        var resources = await UpsertAsync<Resource, ResourceContent>(db, db.Resources, file.Resources, prune, ct);
+        var projects = await UpsertAsync<Project, ProjectContent>(db, db.Projects, file.Projects, prune, ct);
+
+        // Un seul SaveChanges pour les deux types : EF l'enveloppe dans une transaction, donc l'import
+        // est tout ou rien.
+        await db.SaveChangesAsync(ct);
+
+        // Les images remplacées par le fichier, ou dont la ressource a été élaguée.
+        await images.DeleteUnusedAsync(db, released: imagesBefore, ct);
+
+        return new ImportReport(resources, projects);
+    }
+
+    /// <summary>
+    /// L'algorithme d'import, commun à tous les types de contenu : apparier par slug, mettre à jour
+    /// ou créer, numéroter l'ordre d'affichage, et relever les orphelins.
+    ///
+    /// Générique sur deux types parce qu'il en faut deux pour décrire la correspondance : l'entité en
+    /// base (<typeparamref name="TEntity"/>) et les champs du fichier (<typeparamref name="TContent"/>).
+    /// Les contraintes <c>where</c> sont ce qui rend le corps possible : la première garantit un
+    /// <c>Slug</c> et un <c>SortOrder</c>, la seconde que le contenu sait se valider et se recopier
+    /// sur l'entité (cf. <see cref="IContentFor{TEntity}"/>).
+    ///
+    /// Rien n'est enregistré ici : les entités chargées sont suivies par EF et c'est l'appelant qui
+    /// déclenche le <c>SaveChangesAsync</c>, une fois tous les types traités.
+    /// </summary>
+    private static async Task<ImportCounts> UpsertAsync<TEntity, TContent>(
+        AppDbContext db, DbSet<TEntity> set, List<TContent> contents, bool prune, CancellationToken ct)
+        where TEntity : class, IOrderedContent
+        where TContent : IContentFor<TEntity>
+    {
         // Une seule requête pour tout charger, indexée par slug. Ici le tracking d'EF est utile
         // (contrairement aux lectures publiques) : modifier une entité suivie suffit à produire
         // l'UPDATE, et le ChangeTracker nous dit ensuite lesquelles ont réellement changé.
-        var existing = await db.Resources.ToDictionaryAsync(r => r.Slug, ct);
-        var imagesBefore = existing.Values.Select(r => r.ImageFile).ToList();
+        var existing = await set.ToDictionaryAsync(e => e.Slug, ct);
         var seen = new HashSet<string>();
         var created = 0;
 
         // L'index dans le fichier devient l'ordre d'affichage : réordonner le YAML réordonne le site.
-        foreach (var (content, index) in file.Resources.Select((c, i) => (c, i)))
+        foreach (var (content, index) in contents.Select((c, i) => (c, i)))
         {
             seen.Add(content.Slug);
 
-            if (existing.TryGetValue(content.Slug, out var resource))
+            if (existing.TryGetValue(content.Slug, out var entity))
             {
-                content.ApplyTo(resource);
+                content.ApplyTo(entity);
             }
             else
             {
-                resource = content.ToNewResource();
-                db.Resources.Add(resource);
+                entity = content.ToNew();
+                set.Add(entity);
                 created++;
             }
 
-            resource.SortOrder = index;
+            entity.SortOrder = index;
         }
 
         var orphans = existing.Keys.Where(slug => !seen.Contains(slug)).Order().ToList();
@@ -78,22 +130,17 @@ public static class ContentImporter
 
         if (prune && orphans.Count > 0)
         {
-            db.Resources.RemoveRange(orphans.Select(slug => existing[slug]));
+            set.RemoveRange(orphans.Select(slug => existing[slug]));
             removed = orphans.Count;
         }
 
         // À lire avant SaveChanges : après, tout est repassé à Unchanged.
-        var updated = db.ChangeTracker.Entries<Resource>().Count(e => e.State == EntityState.Modified);
+        var updated = db.ChangeTracker.Entries<TEntity>().Count(e => e.State == EntityState.Modified);
 
-        await db.SaveChangesAsync(ct);
-
-        // Les images remplacées par le fichier, ou dont la ressource a été élaguée.
-        await images.DeleteUnusedAsync(db, released: imagesBefore, ct);
-
-        return new ImportReport(
+        return new ImportCounts(
             Created: created,
             Updated: updated,
-            Unchanged: file.Resources.Count - created - updated,
+            Unchanged: contents.Count - created - updated,
             Removed: removed,
             OrphanSlugs: prune ? [] : orphans);
     }
@@ -120,7 +167,21 @@ public static class ContentImporter
             })
             .ToListAsync(ct);
 
-        return new ContentFile { Resources = resources };
+        var projects = await db.Projects
+            .AsNoTracking()
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new ProjectContent
+            {
+                Slug = p.Slug,
+                Title = p.Title,
+                Description = p.Description,
+                Techs = p.Techs,
+                GithubUrl = p.GithubUrl,
+                DemoUrl = p.DemoUrl,
+            })
+            .ToListAsync(ct);
+
+        return new ContentFile { Resources = resources, Projects = projects };
     }
 
     /// <summary>
@@ -131,30 +192,24 @@ public static class ContentImporter
     {
         var errors = new List<string>();
 
+        CollectEntryErrors<Resource, ResourceContent>(file.Resources, "ressource", errors);
+        CollectEntryErrors<Project, ProjectContent>(file.Projects, "projet", errors);
+
+        // Propre aux ressources : l'image doit être soit déjà dans le dossier de l'API, soit présente
+        // dans content/images/ pour que l'import l'y copie.
         foreach (var (content, index) in file.Resources.Select((c, i) => (c, i)))
         {
-            // L'entrée n'a pas forcément de slug utilisable dans le message : on la situe alors par son rang.
-            var where = string.IsNullOrWhiteSpace(content.Slug) ? $"entrée n°{index + 1}" : content.Slug;
-            var entryErrors = content.Validate();
-
-            errors.AddRange(entryErrors.Select(error => $"{where}, {error.Key} : {error.Value[0]}"));
-
             var image = content.ImageFile;
-            if (!entryErrors.ContainsKey("imageFile")
-                && !string.IsNullOrWhiteSpace(image)
+
+            if (!string.IsNullOrWhiteSpace(image)
+                && ImageStore.IsValidName(image)
                 && !images.Exists(image)
                 && !File.Exists(Path.Combine(imagesSourceDirectory, image)))
             {
-                errors.Add($"{where}, imageFile : « {image} » absente de {imagesSourceDirectory}.");
+                errors.Add($"ressource {Describe(content.Slug, index)}, "
+                    + $"imageFile : « {image} » absente de {imagesSourceDirectory}.");
             }
         }
-
-        var duplicates = file.Resources
-            .GroupBy(r => r.Slug)
-            .Where(g => !string.IsNullOrWhiteSpace(g.Key) && g.Count() > 1)
-            .Select(g => g.Key);
-
-        errors.AddRange(duplicates.Select(slug => $"{slug} : slug en double."));
 
         if (errors.Count > 0)
         {
@@ -162,4 +217,34 @@ public static class ContentImporter
                 "Fichier de contenu invalide :" + Environment.NewLine + string.Join(Environment.NewLine, errors));
         }
     }
+
+    /// <summary>Valide chaque entrée d'une section et repère les slugs en double.</summary>
+    /// <param name="label">Nom du type au singulier, pour situer l'erreur (« ressource », « projet »).</param>
+    private static void CollectEntryErrors<TEntity, TContent>(
+        List<TContent> contents, string label, List<string> errors)
+        where TEntity : class, IOrderedContent
+        where TContent : IContentFor<TEntity>
+    {
+        foreach (var (content, index) in contents.Select((c, i) => (c, i)))
+        {
+            var where = Describe(content.Slug, index);
+
+            errors.AddRange(content.Validate()
+                .Select(error => $"{label} {where}, {error.Key} : {error.Value[0]}"));
+        }
+
+        var duplicates = contents
+            .GroupBy(c => c.Slug)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() > 1)
+            .Select(group => group.Key);
+
+        errors.AddRange(duplicates.Select(slug => $"{label} {slug} : slug en double."));
+    }
+
+    /// <summary>
+    /// Situe une entrée dans les messages d'erreur. Elle n'a pas forcément de slug utilisable
+    /// (c'est peut-être justement ce qui manque) : on la repère alors par son rang.
+    /// </summary>
+    private static string Describe(string slug, int index) =>
+        string.IsNullOrWhiteSpace(slug) ? $"n°{index + 1}" : slug;
 }

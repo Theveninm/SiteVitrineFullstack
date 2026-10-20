@@ -6,28 +6,52 @@
     pour ces derniers.
   </p>
 
-  <!-- track title : les titres de projets sont uniques et stables, pas besoin d'un id dédié. -->
-  <div class="projects__list">
-    @for (project of projects; track project.title) {
-      <article class="project">
-        <h2>{{ project.title }}</h2>
-        <p class="project__description">{{ project.description }}</p>
+  <!-- Même chaîne d'états que la page Ressources, et pour la même raison : elle doit rester
+       exclusive, car en état d'erreur projects.value() LÈVE une exception au lieu de renvoyer une
+       liste vide. On ne l'appelle donc que dans les branches où l'on sait déjà qu'il n'y a pas
+       d'erreur. -->
+  @if (projects.isLoading()) {
+    <p class="content-status">Chargement des projets…</p>
+  } @else if (projects.error()) {
+    <p class="content-status content-status--error">
+      Impossible de charger les projets pour le moment.
+      <button type="button" class="content-status__retry" (click)="projects.reload()">
+        Réessayer
+      </button>
+    </p>
+  } @else if (projects.value().length === 0) {
+    <p class="content-status">Cette section est en cours de construction.</p>
+  } @else {
+    <!-- track slug : identifiant stable fourni par l'API, insensible à un renommage du titre. -->
+    <div class="projects__list">
+      @for (project of projects.value(); track project.slug) {
+        <article class="project">
+          <h2>{{ project.title }}</h2>
+          <p class="project__description">{{ project.description }}</p>
 
-        <div class="project__techs-block">
-          <h3>Principales technologies</h3>
-          <ul class="project__techs">
-            @for (tech of project.techs; track tech) {
-              <li>{{ tech }}</li>
+          <div class="project__techs-block">
+            <h3>Principales technologies</h3>
+            <ul class="project__techs">
+              @for (tech of project.techs; track tech) {
+                <li>{{ tech }}</li>
+              }
+            </ul>
+          </div>
+
+          <div class="project__links">
+            @if (project.githubUrl) {
+              <a [href]="project.githubUrl" target="_blank" rel="noopener noreferrer"
+                >Voir sur GitHub</a
+              >
             }
-          </ul>
-        </div>
-
-        <div class="project__links">
-          @if (project.githubUrl) {
-            <a [href]="project.githubUrl" target="_blank" rel="noopener noreferrer">Voir sur GitHub</a>
-          }
-        </div>
-      </article>
-    }
-  </div>
+            @if (project.demoUrl) {
+              <a [href]="project.demoUrl" target="_blank" rel="noopener noreferrer"
+                >Voir la démonstration</a
+              >
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
 </section>

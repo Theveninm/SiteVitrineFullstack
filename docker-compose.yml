@@ -94,7 +94,7 @@ services:
       # (sans elles, chaque redéploiement déconnecterait le back-office). Volume nommé, géré par Docker
       # comme pgdata — et comme lui, à sauvegarder (cf. README).
       - storage:/app/storage
-      # Le fichier de contenu et ses images (content/resources.yaml + content/images/), lus par
+      # Le fichier de contenu et ses images (content/content.yaml + content/images/), lus par
       # l'import : chargement d'une base neuve, ou restauration. L'édition courante se fait dans le
       # back-office, la base fait foi. Monté en lecture seule — l'API n'écrit jamais dedans, l'export
       # passe par la sortie standard ou par l'administration technique.

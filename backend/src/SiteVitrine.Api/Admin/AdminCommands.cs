@@ -49,7 +49,7 @@ public static class AdminCommands
                     {
                         // Signalé mais pas supprimé : voir --prune.
                         logger.LogWarning(
-                            "Ressources en base absentes du fichier : {Slugs}", string.Join(", ", report.OrphanSlugs));
+                            "Entrées en base absentes du fichier : {Slugs}", string.Join(", ", report.OrphanSlugs));
                     }
 
                     return 0;
@@ -58,7 +58,7 @@ public static class AdminCommands
                 case "export":
                 {
                     var file = await ContentImporter.ExportAsync(db);
-                    // Sur la sortie standard : `docker compose run --rm api export > content/resources.yaml`.
+                    // Sur la sortie standard : `docker compose run --rm api export > content/content.yaml`.
                     Console.Out.Write(file.ToYaml());
                     return 0;
                 }

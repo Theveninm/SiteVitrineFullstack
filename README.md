@@ -38,12 +38,13 @@ Chaque responsabilité a son mécanisme — c'est le principe d'organisation de 
 | Responsabilité | Mécanisme | Quand |
 | --- | --- | --- |
 | **Schéma** (migrations EF) | conteneur `api-init`, s'exécute et s'arrête | à chaque déploiement, automatique |
-| **Contenu** (avis, images) | la base, éditée dans le **back-office** `https://<domaine>/admin` (compte Google) ; images dans le volume `storage` | à chaque enregistrement |
-| **Copie du contenu** | [`content/`](content/) : `resources.yaml` + `images/`, monté en lecture seule | import / export, à la demande |
+| **Contenu** (projets, avis, images) | la base, éditée dans le **back-office** `https://<domaine>/admin` (compte Google) ; images dans le volume `storage` | à chaque enregistrement |
+| **Copie du contenu** | [`content/`](content/) : `content.yaml` + `images/`, monté en lecture seule | import / export, à la demande |
 | **Administration technique** | port `8081`, hors du chemin public : état, import, export | tunnel SSH |
 
-La base fait foi. Le contenu éditorial ne vit **pas** dans le code : corriger une faute dans un avis
-n'exige ni recompilation ni redéploiement. Voir [`backend/README.md`](backend/README.md#modifier-le-contenu).
+La base fait foi. Le contenu éditorial — les ressources de la page « Livres & outils » comme les
+projets — ne vit **pas** dans le code : corriger une faute dans un avis n'exige ni recompilation ni
+redéploiement. Voir [`backend/README.md`](backend/README.md#modifier-le-contenu).
 
 ---
 
@@ -121,7 +122,7 @@ vit donc dans un dossier ordinaire du serveur, désigné par `CONTENT_DIR`.
 1. VS Code → **Remote Explorer** → **SSH** → se connecter au serveur ;
 2. **File → Open Folder** → `/root` ;
 3. dans l'explorateur de fichiers de VS Code, créer `site-vitrine/content/` ;
-4. y glisser-déposer `content/resources.yaml` **et** le dossier `content/images/` depuis
+4. y glisser-déposer `content/content.yaml` **et** le dossier `content/images/` depuis
    l'explorateur Windows.
 
 Ces fichiers ne servent qu'à charger la base neuve (étape 6). Ensuite, le contenu s'édite dans le
@@ -221,8 +222,9 @@ Dans Scalar :
 1. `GET /admin/status` → vérifier `contentFile.exists: true` (sinon, `CONTENT_DIR` ne pointe pas
    sur le dossier de l'étape 2) et `backOffice.googleConfigured: true` (sinon,
    l'une des trois variables Google de l'étape 4 est vide) ;
-2. `POST /admin/content/import` → le rapport indique ce qui a été créé, mis à jour ou laissé tel
-   quel. Les images de `content/images/` sont copiées dans le volume `storage` au passage.
+2. `POST /admin/content/import` → le rapport indique, pour les ressources et pour les projets, ce
+   qui a été créé, mis à jour ou laissé tel quel. Les images de `content/images/` sont copiées dans
+   le volume `storage` au passage.
 
 ⚠️ Une fois le back-office en service, **ne plus importer** : l'import écraserait avec le fichier tout
 ce qui a été modifié depuis dans le back-office.
@@ -258,8 +260,10 @@ Vérification dans le navigateur : la page Ressources affiche les avis, et
 `https://<domaine>/admin` → **Se connecter avec Google**, avec un compte listé dans `ADMIN_EMAILS`.
 Aucun lien du site n'y mène.
 
-- **Ajouter / modifier** une ressource : formulaire ; l'image se **glisse-dépose** dans la zone
-  prévue et part aussitôt vers l'API ;
+Deux sections, en onglets : **Livres & outils** et **Projets**. Mêmes gestes dans les deux.
+
+- **Ajouter / modifier** une entrée : formulaire ; pour une ressource, l'image se **glisse-dépose**
+  dans la zone prévue et part aussitôt vers l'API ;
 - **Réordonner** : glisser une ligne de la liste ;
 - **Images inutilisées** : supprimées automatiquement. L'ancienne image d'une ressource modifiée ou
   supprimée disparaît dès l'enregistrement ; une image déposée dans un formulaire finalement
@@ -274,9 +278,10 @@ pas celle de Google.
 > partie de l'image Docker du frontend : après le premier redéploiement, elles sont en 404 tant
 > qu'elles ne sont pas dans le volume `storage`. Et la clé `imageUrl` du YAML est devenue
 > `imageFile` (la migration `RenameImageUrlToImageFile` renomme la colonne sans perte). Donc :
-> créer les identifiants Google et renseigner leurs variables (étape 4), remplacer sur le serveur `resources.yaml` par la
-> version du dépôt et y ajouter `images/` (étape 2), redéployer, puis lancer **un** import (étape 6)
-> — il copie les images et laisse le contenu inchangé.
+> créer les identifiants Google et renseigner leurs variables (étape 4), remplacer sur le serveur
+> `resources.yaml` par `content.yaml` (le fichier a été renommé en gagnant une section `projects:`)
+> et y ajouter `images/` (étape 2), redéployer, puis lancer **un** import (étape 6) — il copie les
+> images, crée les projets et laisse le reste du contenu inchangé.
 
 **Le code** : pousser sur GitHub, puis **Portainer → Stacks → site-vitrine → Pull and redeploy**.
 Le volume `pgdata` n'est pas touché : les données sont conservées, et seules les migrations en
@@ -291,7 +296,7 @@ définition a changé — modifier le frontend ne redémarre donc ni l'API ni la
 
 **Le contenu** n'est pas concerné par un redéploiement : il vit dans la base et le volume `storage`,
 et s'édite dans le back-office. Pour garder une copie lisible dans le dépôt : `GET /admin/content/export`
-(étape 5), coller le résultat dans `content/resources.yaml`, et récupérer les nouvelles images avec la
+(étape 5), coller le résultat dans `content/content.yaml`, et récupérer les nouvelles images avec la
 commande de sauvegarde ci-dessous.
 
 ---

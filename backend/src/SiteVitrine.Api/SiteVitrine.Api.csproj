@@ -34,7 +34,7 @@
     <!-- Interface web du back-office : rend le document OpenAPI sous forme d'écrans avec formulaires.
          Depuis .NET 9, MapOpenApi ne fournit que le JSON, plus d'interface intégrée. -->
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.1" />
-    <!-- Lecture/écriture du fichier de contenu content/resources.yaml. YAML plutôt que JSON pour
+    <!-- Lecture/écriture du fichier de contenu content/content.yaml. YAML plutôt que JSON pour
          ses blocs littéraux : les avis sont de longs paragraphes, éditables tels quels sans
          échappement. C'est la seule dépendance qui existe pour sortir le contenu du code. -->
     <PackageReference Include="YamlDotNet" Version="18.1.0" />

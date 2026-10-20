@@ -42,7 +42,7 @@ describe('ResourceList', () => {
   it('affiche les ressources de l’API', async () => {
     await respondWith(FAKE_RESOURCES);
 
-    expect(fixture.nativeElement.querySelectorAll('.resource-list__item').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.admin-list__item').length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('VS Code');
   });
 

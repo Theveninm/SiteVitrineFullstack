@@ -1,0 +1,42 @@
+<section class="admin-page">
+  <app-admin-nav />
+
+  <header class="admin-list__header">
+    <h1>Projets</h1>
+    <a class="admin-button admin-button--primary" routerLink="nouveau">Nouveau projet</a>
+  </header>
+
+  <p class="admin-form__hint">Glisser une ligne pour changer l'ordre d'affichage sur le site.</p>
+
+  @if (error()) {
+    <p class="admin-form__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (projects.error()) {
+    <p class="admin-form__error">Impossible de charger les projets.</p>
+  } @else {
+    <!-- cdkDropList : conteneur dont les éléments cdkDrag sont réordonnables. La CDK anime le
+         déplacement, mais ne touche pas aux données : c'est drop() qui réordonne le tableau.
+         cdkDragPreviewContainer="parent" : l'élément en cours de glisser reste dans ce composant au
+         lieu d'être déplacé dans <body>, donc à portée de ses styles. -->
+    <ol
+      class="admin-list__items"
+      cdkDropList
+      cdkDropListLockAxis="y"
+      (cdkDropListDropped)="drop($event)"
+    >
+      @for (project of items(); track project.slug) {
+        <li class="admin-list__item" cdkDrag cdkDragPreviewContainer="parent">
+          <span class="admin-list__grip" aria-hidden="true">⠿</span>
+
+          <span class="admin-list__title">{{ project.title }}</span>
+
+          <a class="admin-button" [routerLink]="['modifier', project.slug]">Modifier</a>
+          <button type="button" class="admin-button admin-button--danger" (click)="remove(project)">
+            Supprimer
+          </button>
+        </li>
+      }
+    </ol>
+  }
+</section>

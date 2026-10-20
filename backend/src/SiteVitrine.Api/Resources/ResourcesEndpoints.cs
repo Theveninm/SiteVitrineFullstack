@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SiteVitrine.Api.Content;
 using SiteVitrine.Api.Data;
 using SiteVitrine.Api.Images;
 
@@ -87,8 +88,7 @@ public static class ResourcesEndpoints
         if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
         var resource = content.ToNewResource();
-        // MaxAsync sur un int? : renvoie null (et non une exception) quand la table est vide.
-        resource.SortOrder = (await db.Resources.MaxAsync(r => (int?)r.SortOrder, ct) ?? -1) + 1;
+        resource.SortOrder = await db.Resources.NextSortOrderAsync(ct);
 
         db.Resources.Add(resource);
         await db.SaveChangesAsync(ct);
@@ -134,21 +134,12 @@ public static class ResourcesEndpoints
     private static async Task<Results<NoContent, ValidationProblem>> Reorder(
         [FromBody] string[] slugs, AppDbContext db, CancellationToken ct)
     {
-        var resources = await db.Resources.ToDictionaryAsync(r => r.Slug, ct);
-
-        // La liste reçue doit décrire exactement la base. Une ressource ajoutée ou supprimée entre-temps
-        // (depuis un autre onglet) rendrait l'ordre demandé ambigu : mieux vaut refuser.
-        if (slugs.Length != resources.Count || !resources.Keys.ToHashSet().SetEquals(slugs))
+        if (!await db.Resources.TryApplyOrderAsync(slugs, ct))
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
             {
                 ["slugs"] = ["La liste des ressources a changé entre-temps : recharger la page."],
             });
-        }
-
-        foreach (var (slug, index) in slugs.Select((slug, index) => (slug, index)))
-        {
-            resources[slug].SortOrder = index;
         }
 
         await db.SaveChangesAsync(ct);

@@ -1,21 +1,12 @@
 import { httpResource } from '@angular/common/http';
 import { Component, inject, linkedSignal } from '@angular/core';
-import {
-  FieldTree,
-  FormField,
-  FormRoot,
-  form,
-  max,
-  min,
-  pattern,
-  required,
-} from '@angular/forms/signals';
+import { FormField, FormRoot, form, max, min, pattern, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Resource } from '../../ressources/resource.model';
 import { FieldError } from '../field-error/field-error';
 import { ImageDrop } from '../image-drop/image-drop';
-import { errorMessage, validationErrors } from '../problem';
+import { serverFieldErrors } from '../problem';
 import { ResourceAdminService } from '../resource-admin.service';
 
 /**
@@ -84,10 +75,17 @@ export class ResourceForm {
             } else {
               await this.admin.create(resource);
             }
-            await this.router.navigate(['/admin']);
+            await this.router.navigate(['/admin/ressources']);
             return undefined;
           } catch (error) {
-            return serverErrors(error, fields);
+            return serverFieldErrors(error, {
+              slug: fields.slug,
+              title: fields.title,
+              imageFile: fields.imageFile,
+              siteUrl: fields.siteUrl,
+              avis: fields.avis,
+              note: fields.note,
+            });
           }
         },
       },
@@ -95,32 +93,17 @@ export class ResourceForm {
   );
 }
 
-/**
- * Rattache chaque erreur de validation du serveur (slug déjà pris, image expirée…) au champ du même
- * nom : elle s'affiche alors sous ce champ, exactement comme une erreur locale. Une erreur sans champ
- * correspondant reste au niveau du formulaire.
- */
-function serverErrors(error: unknown, fields: FieldTree<ResourceFormModel>) {
-  const fieldsByName: Record<string, FieldTree<unknown> | undefined> = {
-    slug: fields.slug,
-    title: fields.title,
-    imageFile: fields.imageFile,
-    siteUrl: fields.siteUrl,
-    avis: fields.avis,
-    note: fields.note,
-  };
-
-  const errors = Object.entries(validationErrors(error)).map(([name, messages]) => ({
-    kind: 'server',
-    fieldTree: fieldsByName[name],
-    message: messages.join(' '),
-  }));
-
-  return errors.length > 0 ? errors : { kind: 'server', message: errorMessage(error) };
-}
-
 function emptyModel(): ResourceFormModel {
-  return { slug: '', title: '', imageFile: '', siteUrl: '', avis: '', positifs: '', negatifs: '', note: 3 };
+  return {
+    slug: '',
+    title: '',
+    imageFile: '',
+    siteUrl: '',
+    avis: '',
+    positifs: '',
+    negatifs: '',
+    note: 3,
+  };
 }
 
 function toFormModel(resource: Resource): ResourceFormModel {

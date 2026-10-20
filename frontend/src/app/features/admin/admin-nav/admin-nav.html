@@ -1,0 +1,18 @@
+<nav class="admin-nav">
+  <div class="admin-nav__tabs">
+    <!-- routerLinkActive marque l'onglet de la section courante. Les liens sont absolus : ce
+         composant est affiché depuis plusieurs routes, un lien relatif ne pointerait pas au même
+         endroit selon l'écran. -->
+    <a
+      class="admin-nav__tab"
+      routerLink="/admin/ressources"
+      routerLinkActive="admin-nav__tab--active"
+      >Livres &amp; outils</a
+    >
+    <a class="admin-nav__tab" routerLink="/admin/projets" routerLinkActive="admin-nav__tab--active"
+      >Projets</a
+    >
+  </div>
+
+  <button type="button" class="admin-button" (click)="logout()">Se déconnecter</button>
+</nav>

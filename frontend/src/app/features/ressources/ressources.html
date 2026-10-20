@@ -12,16 +12,16 @@
        renvoie pas une liste vide, il LÈVE une exception. Il ne faut donc l'appeler que dans les
        branches où l'on sait déjà qu'il n'y a pas d'erreur. -->
   @if (resources.isLoading()) {
-    <p class="ressources__status">Chargement des ressources…</p>
+    <p class="content-status">Chargement des ressources…</p>
   } @else if (resources.error()) {
-    <p class="ressources__status ressources__status--error">
+    <p class="content-status content-status--error">
       Impossible de charger les ressources pour le moment.
-      <button type="button" class="ressources__retry" (click)="resources.reload()">
+      <button type="button" class="content-status__retry" (click)="resources.reload()">
         Réessayer
       </button>
     </p>
   } @else if (resources.value().length === 0) {
-    <p class="ressources__status">Cette section est en cours de construction.</p>
+    <p class="content-status">Cette section est en cours de construction.</p>
   } @else {
     <!-- track slug : identifiant stable fourni par l'API, insensible à un renommage du titre. -->
     <div class="ressources__list">
@@ -37,14 +37,22 @@
                 rel="noopener noreferrer"
               >
                 @if (resource.imageFile) {
-                  <img class="resource__image" [src]="imageSrc(resource.imageFile)" [alt]="resource.title" />
+                  <img
+                    class="resource__image"
+                    [src]="imageSrc(resource.imageFile)"
+                    [alt]="resource.title"
+                  />
                 }
                 <span class="resource__link-label">Voir le site officiel</span>
               </a>
             } @else {
               <div class="resource__media">
                 @if (resource.imageFile) {
-                  <img class="resource__image" [src]="imageSrc(resource.imageFile)" [alt]="resource.title" />
+                  <img
+                    class="resource__image"
+                    [src]="imageSrc(resource.imageFile)"
+                    [alt]="resource.title"
+                  />
                 }
               </div>
             }

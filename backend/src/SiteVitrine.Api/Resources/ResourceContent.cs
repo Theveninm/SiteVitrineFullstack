@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using SiteVitrine.Api.Content;
 using SiteVitrine.Api.Images;
 
 namespace SiteVitrine.Api.Resources;
@@ -7,13 +7,13 @@ namespace SiteVitrine.Api.Resources;
 /// Les champs éditables d'une ressource : tout <see cref="Resource"/> sauf ses deux champs techniques.
 ///
 /// C'est la forme commune aux deux façons d'écrire du contenu — une entrée de
-/// <c>content/resources.yaml</c> (import) et le corps des requêtes du back-office. Validation et
+/// <c>content/content.yaml</c> (import) et le corps des requêtes du back-office. Validation et
 /// recopie vers l'entité n'existent ainsi qu'en un seul exemplaire.
 ///
 /// Classe mutable à constructeur vide plutôt que record : YamlDotNet instancie par réflexion et ne
 /// sait pas satisfaire les membres <c>required</c> (cf. ContentFile).
 /// </summary>
-public sealed partial class ResourceContent
+public sealed class ResourceContent : IContentFor<Resource>
 {
     public string Slug { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
@@ -40,7 +40,7 @@ public sealed partial class ResourceContent
         void Fail(string field, string message) => errors.TryAdd(field, [message]);
 
         if (string.IsNullOrWhiteSpace(Slug)) Fail("slug", "Obligatoire.");
-        if (!SlugFormat().IsMatch(Slug)) Fail("slug", "Minuscules, chiffres et tirets uniquement (ex. cs-players-guide).");
+        if (!ContentRules.IsValidSlug(Slug)) Fail("slug", ContentRules.SlugMessage);
         if (Slug.Length > Resource.SlugMaxLength) Fail("slug", $"{Resource.SlugMaxLength} caractères maximum.");
 
         if (string.IsNullOrWhiteSpace(Title)) Fail("title", "Obligatoire.");
@@ -57,10 +57,7 @@ public sealed partial class ResourceContent
 
         if (!string.IsNullOrWhiteSpace(SiteUrl))
         {
-            var isWebUrl = Uri.TryCreate(SiteUrl, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
-
-            if (!isWebUrl) Fail("siteUrl", "Adresse complète attendue (https://…).");
+            if (!ContentRules.IsWebUrl(SiteUrl)) Fail("siteUrl", ContentRules.UrlMessage);
             if (SiteUrl.Length > Resource.SiteUrlMaxLength) Fail("siteUrl", $"{Resource.SiteUrlMaxLength} caractères maximum.");
         }
 
@@ -93,13 +90,8 @@ public sealed partial class ResourceContent
         return resource;
     }
 
-    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+    /// <summary>Implémentation explicite : <see cref="ToNewResource"/> en porte le nom métier.</summary>
+    Resource IContentFor<Resource>.ToNew() => ToNewResource();
 
-    /// <summary>
-    /// [GeneratedRegex] : l'expression est compilée en C# à la compilation par un générateur de code,
-    /// au lieu d'être analysée à l'exécution. D'où la méthode <c>partial</c> sans corps, et le
-    /// <c>partial</c> sur la classe.
-    /// </summary>
-    [GeneratedRegex("^[a-z0-9]+(-[a-z0-9]+)*$")]
-    private static partial Regex SlugFormat();
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }

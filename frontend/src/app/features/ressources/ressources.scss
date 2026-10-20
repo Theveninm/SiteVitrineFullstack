@@ -1,3 +1,5 @@
+@use '../content-status';
+
 .ressources {
   max-width: 960px;
   margin: 0 auto;
@@ -12,27 +14,6 @@
     font-style: italic;
     font-weight: 600;
     text-align: justify;
-  }
-
-  // Messages d'état de la liste : chargement, erreur, section vide.
-  &__status {
-    opacity: 0.7;
-
-    &--error {
-      opacity: 1;
-      color: #c62828;
-    }
-  }
-
-  &__retry {
-    margin-left: 0.75rem;
-    padding: 0.25rem 0.75rem;
-    font: inherit;
-    color: inherit;
-    background: none;
-    border: 1px solid currentcolor;
-    border-radius: 4px;
-    cursor: pointer;
   }
 
   &__list {

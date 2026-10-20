@@ -1,0 +1,91 @@
+<section class="admin-page">
+  <a class="project-form__back" routerLink="/admin/projets">← Retour à la liste</a>
+  <h1>{{ editedSlug ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
+
+  <!-- Chaîne exclusive : value() d'un httpResource en erreur lève une exception (cf. page Projets). -->
+  @if (existing.error()) {
+    <p class="admin-form__error">Projet introuvable.</p>
+  } @else if (existing.isLoading()) {
+    <p>Chargement…</p>
+  } @else {
+    <form class="admin-form" [formRoot]="projectForm">
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="title">Titre</label>
+        <input id="title" class="admin-form__input" [formField]="projectForm.title" />
+        <app-field-error [field]="projectForm.title" />
+      </div>
+
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="slug">Slug</label>
+        <p class="admin-form__hint">Identifiant stable, utilisé dans les adresses de l'API.</p>
+        <input id="slug" class="admin-form__input" [formField]="projectForm.slug" />
+        <app-field-error [field]="projectForm.slug" />
+      </div>
+
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="description">Description</label>
+        <textarea
+          id="description"
+          class="admin-form__input"
+          rows="8"
+          [formField]="projectForm.description"
+        ></textarea>
+        <app-field-error [field]="projectForm.description" />
+      </div>
+
+      <div class="admin-form__field">
+        <label class="admin-form__label" for="techs">Principales technologies</label>
+        <p class="admin-form__hint">Une par ligne.</p>
+        <textarea
+          id="techs"
+          class="admin-form__input"
+          rows="6"
+          [formField]="projectForm.techs"
+        ></textarea>
+        <app-field-error [field]="projectForm.techs" />
+      </div>
+
+      <div class="project-form__row">
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="githubUrl">Dépôt GitHub</label>
+          <input
+            id="githubUrl"
+            class="admin-form__input"
+            type="url"
+            placeholder="https://…"
+            [formField]="projectForm.githubUrl"
+          />
+          <app-field-error [field]="projectForm.githubUrl" />
+        </div>
+
+        <div class="admin-form__field">
+          <label class="admin-form__label" for="demoUrl">Démonstration en ligne</label>
+          <input
+            id="demoUrl"
+            class="admin-form__input"
+            type="url"
+            placeholder="https://…"
+            [formField]="projectForm.demoUrl"
+          />
+          <app-field-error [field]="projectForm.demoUrl" />
+        </div>
+      </div>
+
+      <!-- Erreurs du serveur qui ne concernent aucun champ en particulier. -->
+      @for (error of projectForm().errors(); track $index) {
+        <p class="admin-form__error" role="alert">{{ error.message }}</p>
+      }
+
+      <div class="admin-form__actions">
+        <button
+          type="submit"
+          class="admin-button admin-button--primary"
+          [disabled]="projectForm().submitting()"
+        >
+          Enregistrer
+        </button>
+        <a class="admin-button" routerLink="/admin/projets">Annuler</a>
+      </div>
+    </form>
+  }
+</section>
